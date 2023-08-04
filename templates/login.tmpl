@@ -1,0 +1,23 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="/assets/main.css">
+    <title>{{.siteName}}</title>
+</head>
+
+<body>
+    <div class="main">
+        <div class="logo"><img src="/assets/logo.svg"></div>
+        
+        <form action="/oidc/login" method="get">
+            <input type="hidden" name="resume_url" value="{{.resumeUrl}}" /> 
+            <button class="lbtn lbtn-flat lbtn-rocketchat" type="submit">
+                <p class="label">
+                    Login
+                </p>
+            </button>
+        </form>
+    </div>
+</body>
+
+</html>

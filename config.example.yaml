@@ -1,0 +1,15 @@
+site:
+  name: Rocket.Chat RFDs
+  url: http://localhost:8877
+dataPath: ./
+oidc:
+  clientId: <OIDC ClientID>
+  clientSecret: <OIDC ClientSecret>
+  issuerUrl: https://okta-url
+  authUrl: https://okta-url/oauth2/v1/authorize
+  tokenUrl: https://okta-url/oauth2/v1/token
+jwt:
+  publicKey: |
+    https://gist.github.com/geekgonecrazy/4eef628036b3b18b251a5319950493b5
+  privateKey: |
+    https://gist.github.com/geekgonecrazy/4eef628036b3b18b251a5319950493b5
