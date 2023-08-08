@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
+	"regexp"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/geekgonecrazy/rfd-tool/config"
@@ -22,7 +23,11 @@ var _oidcVerifier *oidc.IDTokenVerifier
 var _jwtPrivateKey *rsa.PrivateKey
 var _jwtPublicKey *rsa.PublicKey
 
+var _validId *regexp.Regexp
+
 func Setup() error {
+	_validId, _ = regexp.Compile(`^\d{1,4}$`)
+
 	// Initialize datastore
 	store, err := boltstore.New()
 	if err != nil {
