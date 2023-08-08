@@ -9,6 +9,7 @@ type RFD struct {
 	State            RFDState `json:"state"`
 	Discussion       string   `json:"discussion"`
 	LegacyDiscussion string   `json:"legacyDiscussion"`
+	Tags             []string `json:"tags"`
 
 	Content   string `json:"content"`
 	ContentMD string `json:"contentMD"`

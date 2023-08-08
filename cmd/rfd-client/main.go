@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -14,8 +13,8 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/adrg/frontmatter"
 	"github.com/geekgonecrazy/rfd-tool/models"
-	"github.com/gernest/front"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -148,54 +147,17 @@ func getRFDs(worktree string) ([]models.RFD, error) {
 }
 
 func getRFD(rfdDir string, rfdNum string) (*models.RFD, error) {
-	content, err := ioutil.ReadFile(filepath.Join(rfdDir, rfdNum, "README.md")) // the file is inside the local directory
-	if err != nil {
-		fmt.Println("Err", err)
-	}
-
-	m := front.NewMatter()
-	m.Handle("---", front.YAMLHandler)
-	f, body, err := m.Parse(bytes.NewReader(content))
+	f, err := os.Open(filepath.Join(rfdDir, rfdNum, "README.md"))
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
 
-	title, ok := f["title"].(string)
-	if !ok {
-		return nil, errors.New("missing title")
-	}
+	rfd := models.RFD{}
 
-	state, ok := f["state"].(string)
-	if !ok {
-		return nil, errors.New("missing state")
-	}
-
-	rfdState := models.RFDState(state)
-
-	if !rfdState.Valid() {
-		return nil, errors.New("invalid state")
-	}
-
-	authorsInterface, ok := f["authors"].([]interface{})
-	if !ok {
-		return nil, errors.New("missing authors")
-	}
-
-	authors := []string{}
-
-	for _, author := range authorsInterface {
-		authors = append(authors, author.(string))
-	}
-
-	discussion, _ := f["discussion"].(string)
-	if !ok {
-		return nil, errors.New("missing discussion")
-	}
-
-	legacyDiscussion, _ := f["legacy-discussion"].(string)
-
-	if discussion == "" && legacyDiscussion != "" {
-		discussion = legacyDiscussion
+	body, err := frontmatter.Parse(f, &rfd)
+	if err != nil {
+		return nil, err
 	}
 
 	var buf bytes.Buffer
@@ -203,16 +165,11 @@ func getRFD(rfdDir string, rfdNum string) (*models.RFD, error) {
 		return nil, err
 	}
 
-	metadata := &models.RFD{
-		ID:               rfdNum,
-		Title:            title,
-		State:            rfdState,
-		Authors:          authors,
-		Discussion:       discussion,
-		LegacyDiscussion: legacyDiscussion,
-		ContentMD:        body,
-		Content:          string(buf.Bytes()),
-	}
+	rfd.ID = rfdNum
+	rfd.ContentMD = string(body)
+	rfd.Content = string(buf.Bytes())
 
-	return metadata, nil
+	log.Println(rfd)
+
+	return &rfd, nil
 }
