@@ -9,5 +9,10 @@ type Store interface {
 	CreateRFD(rfd *models.RFD) error
 	UpdateRFD(sponsorship *models.RFD) error
 
+	GetTags() ([]models.Tag, error)
+	GetTag(tag string) (*models.Tag, error)
+	CreateTag(tag *models.Tag) error
+	UpdateTag(tag *models.Tag) error
+
 	CheckDb() error
 }

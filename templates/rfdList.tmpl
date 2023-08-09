@@ -9,10 +9,16 @@
     <div class="rfd">
         <div class="logo"><a href="/"><img src="/assets/logo.svg"></a></div>
         <h1>Requests for Discussion</h1>
+
+        {{if .tagFilter}}
+        <h3>Results for tag: {{.tagFilter}}
+        {{end}}
+
         <table>
             <thead>
                 <th>ID</th>
                 <th>Title</th>
+                <th>Tags</th>
                 <th>State</th>
             </thead>
             <tbody>
@@ -20,6 +26,7 @@
                 <tr>
                     <td><a href="/{{ $rfd.ID }}">{{ $rfd.ID }}</a>
                     <td>{{ $rfd.Title }}</td>
+                    <td>{{ range $i, $tag := $rfd.Tags }}{{if $i}}, {{end}}<a href="/tag/{{$tag}}">{{$tag}}</a>{{end}}</td>
                     <td>{{ $rfd.State }}</td>
                 </tr>
                 {{end}}

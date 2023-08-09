@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// DefaultRouteHandler redirects over to github sponsor page
+// DefaultRouteHandler If logged in will render rfds. If not will take to login
 func DefaultRouteHandler(c *gin.Context) {
 	if c.GetBool("loggedIn") {
 		GetRFDsPageHandler(c)
@@ -19,7 +19,26 @@ func DefaultRouteHandler(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/login")
 }
 
-// DefaultRouteHandler redirects over to github sponsor page
+// TagListPageHandler Will tag the tag provided and filter RFDs down to matching
+func TagListPageHandler(c *gin.Context) {
+
+	tag := c.Param("tag")
+
+	if tag == "" {
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
+	}
+
+	rfds, err := core.GetRFDsByTag(tag)
+	if err != nil {
+		handleError(c, "getting rfds by tag", err)
+		return
+	}
+
+	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds, "tagFilter": tag})
+}
+
+// DefaultRouteHandler
 func LoginPageHandler(c *gin.Context) {
 	resumeURL := c.Query("resume_url")
 
@@ -60,7 +79,7 @@ func GetRFDPageHandler(c *gin.Context) {
 func GetRFDsPageHandler(c *gin.Context) {
 	rfds, err := core.GetRFDs()
 	if err != nil {
-		handleErrorJSON(c, "getting rfd by id", err)
+		handleErrorJSON(c, "getting rfds", err)
 		return
 	}
 

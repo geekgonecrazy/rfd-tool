@@ -1,3 +1,5 @@
 config.yaml
 vendor
 store.bbolt
+rfd-server
+rfd-client

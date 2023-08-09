@@ -19,6 +19,7 @@ type boltStore struct {
 var (
 	metaBucket = []byte("meta")
 	rfdBucket  = []byte("rfds")
+	tagsBucket = []byte("tags")
 )
 
 // New creates a new bolt store
@@ -43,6 +44,10 @@ func New() (store.Store, error) {
 	}
 
 	if _, err := tx.CreateBucketIfNotExists(rfdBucket); err != nil {
+		return nil, err
+	}
+
+	if _, err := tx.CreateBucketIfNotExists(tagsBucket); err != nil {
 		return nil, err
 	}
 

@@ -30,6 +30,8 @@ func Run() error {
 	router.POST("/api/v1/rfds/:id", requireAPISecret, controllers.CreateRFDHandler)
 	router.GET("/api/v1/rfds/:id", requireAPISecret, controllers.GetRFDHandler)
 
+	router.GET("/tag/:tag", requireSession, controllers.TagListPageHandler)
+
 	router.GET("/", controllers.DefaultRouteHandler)
 	router.GET("/:id", requireSession, controllers.GetRFDPageHandler)
 
