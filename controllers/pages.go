@@ -76,7 +76,6 @@ func GetRFDPageHandler(c *gin.Context) {
 		"siteName": config.Config.Site.Name,
 		"rfd":      rfd,
 		"content":  content,
-		"repo":     config.Config.Repo,
 	})
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -72,7 +73,7 @@ func main() {
 
 	if *rfdNum != "" {
 		rfdDir := filepath.Join(*folder, "rfd")
-		rfd, err := getRFD(rfdDir, *rfdNum)
+		rfd, err := getRFD(rfdDir, *rfdNum, false)
 		if err != nil {
 			panic(err)
 		}
@@ -134,7 +135,7 @@ func getRFDs(worktree string) ([]models.RFD, error) {
 		log.Println(rfdNumber)
 
 		if validRFDNumber.Match([]byte(rfdNumber)) {
-			metadata, err := getRFD(rfdDir, rfdNumber)
+			metadata, err := getRFD(rfdDir, rfdNumber, true)
 			if err != nil {
 				return nil, err
 			}
@@ -146,7 +147,7 @@ func getRFDs(worktree string) ([]models.RFD, error) {
 	return RFDs, nil
 }
 
-func getRFD(rfdDir string, rfdNum string) (*models.RFD, error) {
+func getRFD(rfdDir string, rfdNum string, bulk bool) (*models.RFD, error) {
 	f, err := os.Open(filepath.Join(rfdDir, rfdNum, "README.md"))
 	if err != nil {
 		panic(err)
@@ -169,7 +170,9 @@ func getRFD(rfdDir string, rfdNum string) (*models.RFD, error) {
 	rfd.ContentMD = string(body)
 	rfd.Content = string(buf.Bytes())
 
-	log.Println(rfd)
+	if !bulk && rfd.Discussion == "" {
+		return nil, errors.New("discussion link required")
+	}
 
 	return &rfd, nil
 }

@@ -16,7 +16,6 @@ var Config *config
 
 type config struct {
 	Site              siteConfig   `yaml:"site" json:"site"`
-	Repo              repoConfig   `yaml:"repo" json:"repo"`
 	DataPath          string       `yaml:"dataPath" json:"dataPath"`
 	APISecret         string       `yaml:"apiSecret" json:"apiSecret"`
 	OIDC              oidcConfig   `yaml:"oidc" json:"oidc"`
@@ -29,12 +28,6 @@ type siteConfig struct {
 	Name    string `yaml:"name" json:"name"`
 	URL     string `yaml:"url" json:"url"`
 	LogoSVG string `yaml:"logo.svg" json:"logo.svg"`
-}
-
-type repoConfig struct {
-	URL        string `yaml:"url" json:"url"`
-	Folder     string `yaml:"folder" json:"folder"`
-	MainBranch string `yaml:"mainBranch" json:"mainBranch"`
 }
 
 type jwtConfig struct {
@@ -51,6 +44,9 @@ type oidcConfig struct {
 }
 
 type githubConfig struct {
+	Repo                string `yaml:"repo" json:"repo"`
+	Folder              string `yaml:"folder" json:"folder"`
+	MainBranch          string `yaml:"mainBranch" json:"mainBranch"`
 	PersonalAccessToken string `yaml:"personalAccessToken"`
 	ClientID            string `yaml:"clientId" json:"clientId"`
 	ClientSecret        string `yaml:"clientSecret" json:"clientSecret"`
