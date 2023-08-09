@@ -72,7 +72,12 @@ func GetRFDPageHandler(c *gin.Context) {
 
 	content := template.HTML(rfd.Content)
 
-	c.HTML(http.StatusOK, "rfd.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfd": rfd, "content": content})
+	c.HTML(http.StatusOK, "rfd.tmpl", gin.H{
+		"siteName": config.Config.Site.Name,
+		"rfd":      rfd,
+		"content":  content,
+		"repo":     config.Config.Repo,
+	})
 }
 
 // GetRFDHandler gets a single RFD by id
