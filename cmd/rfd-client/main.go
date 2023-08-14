@@ -72,7 +72,7 @@ func main() {
 	}
 
 	if *rfdNum != "" {
-		rfdDir := filepath.Join(*folder, "rfd")
+		rfdDir := *folder
 		rfd, err := getRFD(rfdDir, *rfdNum, false)
 		if err != nil {
 			panic(err)
@@ -122,7 +122,7 @@ func sendRFD(rfd *models.RFD) error {
 }
 
 func getRFDs(worktree string) ([]models.RFD, error) {
-	rfdDir := filepath.Join(worktree, "rfd")
+	rfdDir := worktree
 	files, err := ioutil.ReadDir(rfdDir)
 	if err != nil {
 		log.Fatal(err)
