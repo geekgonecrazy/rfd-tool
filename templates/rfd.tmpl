@@ -9,7 +9,7 @@
     <div class="rfd ">
         <div class="logo"><a href="/"><img src="/assets/logo.svg"></a></div>
         <span class="state">{{.rfd.State}}</span>
-        <h1>RFD: {{.rfd.ID}} {{.rfd.Title}}</h1>
+        <h1>{{.rfd.ID}} {{.rfd.Title}}</h1>
         <div>Authors: {{ range $i, $author := .rfd.Authors }}{{if $i}}, {{end}}{{$author}}{{end}}</div>
         {{if .rfd.Tags}}
         <div>Tags: {{ range $i, $tag := .rfd.Tags }}{{if $i}}, {{end}}<a href="/tag/{{$tag}}">{{$tag}}</a>{{end}}</div>
