@@ -11,7 +11,7 @@ body {
     width: 350px;
 }
 
-pre, code {
+pre code {
     color: #f8f8f2;
     background-color: #282a36;
     display: block;
@@ -20,6 +20,21 @@ pre, code {
     line-height: 1.45;
     margin: 0;
     padding: 16px;
+    border-radius: 3px;
+    -o-tab-size: 4;
+    -moz-tab-size: 4;
+    tab-size: 4;
+    overflow: auto;
+}
+
+code {
+    color: #f8f8f2;
+    background-color: #282a36;
+    text-align: left;
+    font-size: 85%;
+    line-height: 1.45;
+    margin: 0;
+    padding: 2px;
     border-radius: 3px;
     -o-tab-size: 4;
     -moz-tab-size: 4;
@@ -41,19 +56,21 @@ pre, code {
 }
 
 .rfd li+li {
-    margin-top: 20px;
+    margin-top: 10px;
 }
 
 .rfd a {
     color: #2997ff;
 }
 
-
-
 .rfd .state {
     background-color: green;
     border-radius: 25px;
     padding: 8px;
+}
+
+.rfd img {
+    max-width: 100%;
 }
 
 .lbtn .logo {
