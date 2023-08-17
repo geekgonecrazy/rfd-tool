@@ -170,7 +170,7 @@ func getRFD(rfdDir string, rfdNum string, bulk bool) (*models.RFD, error) {
 	rfd.ContentMD = string(body)
 	rfd.Content = string(buf.Bytes())
 
-	if !bulk && rfd.Discussion == "" {
+	if !bulk && rfd.State != models.Ideation && rfd.State != models.PreDiscussion && rfd.Discussion == "" {
 		return nil, errors.New("discussion link required")
 	}
 
