@@ -15,28 +15,31 @@ func Run() error {
 	router.Use(static.Serve("/assets", static.LocalFile("./assets", false)))
 	router.GET("/assets/logo.svg", controllers.ServeLogoSVGHandler)
 
-	//router.Use(getSessionFromCookie)
-
-	// Construct oauth authorize url and redirect
+	// OIDC endpoints
 	router.GET("/oidc/login", controllers.OIDCAuthorizationURLHandler)
-
-	// oidc oauth callback url
 	router.GET("/oidc/callback", controllers.OIDCCallbackHandler)
 
-	router.Use(getSessionFromCookie)
+	router.Use(getSessionFromCookieOrHeader)
 
-	// Create RFD
-	//router.POST("/v1/rfds", CreateRFDHandler)
-	router.POST("/api/v1/rfds/:id", requireAPISecret, controllers.CreateRFDHandler)
-	router.GET("/api/v1/rfds/:id", requireAPISecret, controllers.GetRFDHandler)
+	api := router.Group("/api/v1")
+	{
+		// Create/Update RFD by its ID happens from rfd-client currently
+		api.POST("/rfds/:id", requireAPISecret, controllers.CreateRFDHandler)
 
+		api.Use(requireSession)
+		api.GET("/rfds", controllers.GetRFDsHandler)
+		api.GET("/rfds/:id", controllers.GetRFDHandler)
+
+		api.GET("/tags", controllers.GetTagsHandler)
+		api.GET("/tags/:tag/rfds", controllers.GetRFDsForTagHandler)
+	}
+
+	// Server Side Rendered Pages
 	router.GET("/tag/:tag", requireSession, controllers.TagListPageHandler)
-
-	router.GET("/", controllers.DefaultRouteHandler)
 	router.GET("/:id", requireSession, controllers.GetRFDPageHandler)
-
 	router.GET("/login", controllers.LoginPageHandler)
 
+	router.GET("/", controllers.DefaultRouteHandler)
 	router.NoRoute(controllers.DefaultRouteHandler)
 
 	if err := router.Run(":8877"); err != nil {

@@ -60,3 +60,37 @@ func CreateRFDHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"rfd": rfd})
 }
+
+// GetTagsHandler returns list of tags in json
+func GetTagsHandler(c *gin.Context) {
+	tags, err := core.GetTags()
+	if err != nil {
+		handleError(c, "get tags", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tags": tags})
+}
+
+// GetRFDsForTagHandler gets a rfds for a tag Tag
+func GetRFDsForTagHandler(c *gin.Context) {
+	tag := c.Param("tag")
+
+	if tag == "" {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	rfds, err := core.GetRFDsByTag(tag)
+	if err != nil {
+		handleErrorJSON(c, "getting rfd by id", err)
+		return
+	}
+
+	if rfds == nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	c.JSON(http.StatusOK, rfds)
+}

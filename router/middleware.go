@@ -10,11 +10,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func getSessionFromCookie(c *gin.Context) {
+func getSessionFromCookieOrHeader(c *gin.Context) {
 	tokenString, err := c.Cookie("_sess")
 	if err != nil {
 		c.Next()
 		return
+	}
+
+	if tokenString == "" {
+		tokenString = c.GetHeader("Authorization")
+		if err != nil {
+			log.Println(err)
+
+			c.Next()
+			return
+		}
 	}
 
 	if tokenString == "" {

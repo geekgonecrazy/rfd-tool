@@ -12,6 +12,15 @@ func GetRFDs() ([]models.RFD, error) {
 	return _dataStore.GetRFDs()
 }
 
+func GetTags() ([]models.Tag, error) {
+	tags, err := _dataStore.GetTags()
+	if err != nil {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
 func GetRFDsByTag(tag string) ([]models.RFD, error) {
 	t, err := _dataStore.GetTag(tag)
 	if err != nil {
