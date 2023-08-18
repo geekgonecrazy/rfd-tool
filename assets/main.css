@@ -42,6 +42,10 @@ code {
     overflow: auto;
 }
 
+pre.mermaid {
+    background-color: white;
+}
+
 .rfd {
     padding: 20px;
     background-color: #393e46;

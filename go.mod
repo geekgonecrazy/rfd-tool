@@ -10,6 +10,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/yuin/goldmark v1.5.5
+	go.abhg.dev/goldmark/mermaid v0.4.0
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/oauth2 v0.10.0
 	gopkg.in/yaml.v2 v2.4.0

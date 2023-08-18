@@ -20,6 +20,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"go.abhg.dev/goldmark/mermaid"
 )
 
 var validRFDNumber *regexp.Regexp
@@ -34,7 +35,12 @@ func main() {
 	flag.Parse()
 
 	md = goldmark.New(
-		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithExtensions(
+			extension.GFM,
+			&mermaid.Extender{
+				//RenderMode: mermaid.RenderModeServer,
+			},
+		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 		),
