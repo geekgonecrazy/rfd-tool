@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 
 	"github.com/geekgonecrazy/rfd-tool/models"
 )
@@ -97,6 +98,8 @@ func CreateRFD(rfd *models.RFD) error {
 
 		if !exists {
 			tag.RFDs = append(tag.RFDs, rfd.ID)
+
+			sort.Strings(tag.RFDs)
 
 			if err := _dataStore.UpdateTag(tag); err != nil {
 				return err
