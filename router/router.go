@@ -41,6 +41,7 @@ func Run() error {
 
 	router.GET("/create", requireSession, controllers.RFDCreatePageHandler)
 	router.GET("/created", requireSession, controllers.RFDCreatedPageHandler)
+	router.POST("/created", requireSession, controllers.RFDCreatedPageHandler)
 
 	router.GET("/login", controllers.LoginPageHandler)
 

@@ -75,12 +75,10 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 	}
 
 	storage := memory.NewStorage()
-
 	wt := memfs.New()
 
 	log.Println("Cloning RFD Repo")
 	r, err := git.Clone(storage, wt, _gitCloneOptions)
-
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +103,9 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 		return nil, err
 	}
 
-	rfdMeta := models.RFDMeta{}
+	rfdMeta := models.RFDMeta{
+		Tags: []string{},
+	}
 
 	log.Println("Parsing frontmatter off of template")
 	body, err := frontmatter.Parse(template, &rfdMeta)
@@ -116,7 +116,11 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 	rfdMeta.Title = newRFD.Title
 	rfdMeta.Authors = strings.Split(newRFD.Authors, ",")
 	rfdMeta.State = models.Ideation
-	rfdMeta.Tags = strings.Split(newRFD.Tags, ",")
+
+	// Something to do with the split seems to cause it to put an empty set of quotes here if we don't do this
+	if newRFD.Tags != "" {
+		rfdMeta.Tags = strings.Split(newRFD.Tags, ",")
+	}
 
 	rfdSeperater := []byte(`---
 `)
@@ -160,8 +164,13 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 		return nil, err
 	}
 
+	rf, err := worktree.Filesystem.Open(fmt.Sprintf("%s/README.md", rfdFolder))
+	if err != nil {
+		return nil, err
+	}
+
 	log.Println("Rendering RFD to store internally")
-	renderedRFD, err := renderer.RenderRFD(rfdNum, f)
+	renderedRFD, err := renderer.RenderRFD(rfdNum, rf)
 	if err != nil {
 		return nil, err
 	}
@@ -285,6 +294,10 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 	}
 
 	for _, t := range rfd.Tags {
+		if t == "" {
+			continue
+		}
+
 		tag, err := _dataStore.GetTag(t)
 		if err != nil {
 			return err

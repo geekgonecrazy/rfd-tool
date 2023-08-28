@@ -35,7 +35,9 @@ func init() {
 func RenderRFD(rfdNum string, f io.Reader) (*models.RFD, error) {
 	rfd := models.RFD{}
 
-	body, err := frontmatter.Parse(f, &rfd)
+	rfdMeta := models.RFDMeta{}
+
+	body, err := frontmatter.Parse(f, &rfdMeta)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +48,7 @@ func RenderRFD(rfdNum string, f io.Reader) (*models.RFD, error) {
 	}
 
 	rfd.ID = rfdNum
+	rfd.RFDMeta = rfdMeta
 	rfd.ContentMD = string(body)
 	rfd.Content = string(buf.Bytes())
 

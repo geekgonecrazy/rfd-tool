@@ -1,7 +1,7 @@
 package models
 
 type RFDCreatePayload struct {
-	Title   string `json:"name"`
-	Authors string `json:"authors"`
-	Tags    string `json:"tags"`
+	Title   string `json:"title" form:"title" binding:"required"`
+	Authors string `json:"authors" form:"authors" binding:"required"`
+	Tags    string `json:"tags" form:"tags"`
 }

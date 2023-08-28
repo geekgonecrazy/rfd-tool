@@ -32,13 +32,7 @@ func (s *boltStore) GetNextRFDID() (string, error) {
 	return id, nil
 }
 
-func (s *boltStore) SetNextRFDID(id int64) error {
-	tx, err := s.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
+func (s *boltStore) SetNextRFDID(tx *bbolt.Tx, id int64) error {
 	bucket := tx.Bucket(metaBucket)
 
 	nextRFD := id
@@ -86,7 +80,7 @@ func (s *boltStore) IncrementRFDID(tx *bbolt.Tx) error {
 }
 
 func (s *boltStore) EnsureUpdateLatestRFDID() error {
-	tx, err := s.Begin(false)
+	tx, err := s.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -126,9 +120,9 @@ func (s *boltStore) EnsureUpdateLatestRFDID() error {
 		return err
 	}
 
-	if highestID > id {
+	if highestID > id || highestID == 0 {
 		nextID := highestID + 1
-		if err := s.SetNextRFDID(int64(nextID)); err != nil {
+		if err := s.SetNextRFDID(tx, int64(nextID)); err != nil {
 			return err
 		}
 	}
