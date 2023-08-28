@@ -2,6 +2,7 @@ package boltstore
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/geekgonecrazy/rfd-tool/models"
@@ -58,12 +59,15 @@ func (s *boltStore) CreateRFD(rfd *models.RFD) error {
 
 	bucket := tx.Bucket(rfdBucket)
 
-	/*rfdID, err := s.GetNextRFDNumber()
+	nextId, err := s.GetNextRFDID()
 	if err != nil {
 		return err
 	}
 
-	rfd.ID = rfdID*/
+	if rfd.ID != nextId {
+		return errors.New("invalid rfd id.  use next available")
+	}
+
 	rfd.CreatedAt = time.Now()
 	rfd.ModifiedAt = time.Now()
 
@@ -76,18 +80,14 @@ func (s *boltStore) CreateRFD(rfd *models.RFD) error {
 		return err
 	}
 
-	/*if err := s.incrementRFDNumber(tx); err != nil {
+	if err := s.IncrementRFDID(tx); err != nil {
 		return err
-	}*/
+	}
 
 	return tx.Commit()
 }
 
 func (s *boltStore) UpdateRFD(rfd *models.RFD) error {
-	/*if rfd.ID <= 0 {
-		return errors.New("invalid RFD id")
-	}*/
-
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err

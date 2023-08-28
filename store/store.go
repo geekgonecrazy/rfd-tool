@@ -14,5 +14,8 @@ type Store interface {
 	CreateTag(tag *models.Tag) error
 	UpdateTag(tag *models.Tag) error
 
+	EnsureUpdateLatestRFDID() error
+	GetNextRFDID() (string, error)
+
 	CheckDb() error
 }

@@ -4,12 +4,17 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
+	"net/url"
+	"os"
 	"regexp"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/store"
 	"github.com/geekgonecrazy/rfd-tool/store/boltstore"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -25,6 +30,9 @@ var _jwtPublicKey *rsa.PublicKey
 
 var _validId *regexp.Regexp
 
+var _gitPublicKeys *ssh.PublicKeys
+var _gitCloneOptions *git.CloneOptions
+
 func Setup() error {
 	_validId, _ = regexp.Compile(`^\d{1,4}$`)
 
@@ -35,6 +43,10 @@ func Setup() error {
 	}
 
 	_dataStore = store
+
+	if err := _dataStore.EnsureUpdateLatestRFDID(); err != nil {
+		return err
+	}
 
 	_githubOAuth = &oauth2.Config{
 		ClientID:     config.Config.Github.ClientID,
@@ -75,6 +87,29 @@ func Setup() error {
 	}
 
 	_jwtPublicKey = publicKey
+
+	publicKeys, err := ssh.NewPublicKeys(config.Config.Repo.Username, []byte(config.Config.Repo.PrivateDeployKey), "")
+	if err != nil {
+		return err
+	}
+
+	// Setup the git stuff
+	_gitPublicKeys = publicKeys
+
+	u, err := url.Parse(config.Config.Repo.URL)
+	if err != nil {
+		return err
+	}
+
+	sshGithubURL := fmt.Sprintf("%s:%s.git", u.Host, u.Path)
+
+	_gitCloneOptions = &git.CloneOptions{
+		URL:           sshGithubURL,
+		Progress:      os.Stdout,
+		SingleBranch:  true,
+		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", config.Config.Repo.MainBranch)),
+		Auth:          publicKeys,
+	}
 
 	return nil
 }

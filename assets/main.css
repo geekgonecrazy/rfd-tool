@@ -9,6 +9,7 @@ body {
 
 .logo img {
     width: 350px;
+    max-height: 100px;
 }
 
 pre code {
@@ -67,6 +68,7 @@ pre.mermaid {
 
 .rfd a {
     color: #2997ff;
+    text-decoration-line: none;
 }
 
 .rfd .state {
