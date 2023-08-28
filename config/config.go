@@ -20,6 +20,7 @@ type config struct {
 	APISecret         string       `yaml:"apiSecret" json:"apiSecret"`
 	OIDC              oidcConfig   `yaml:"oidc" json:"oidc"`
 	Github            githubConfig `yaml:"github" json:"github"`
+	Repo              repoConfig   `yaml:"repo" json:"repo"`
 	JWT               jwtConfig    `yaml:"jwt" json:"jwt"`
 	RocketChatWebhook string       `yaml:"rocketchatWebhook" json:"rocketchatWebhook"`
 }
@@ -43,13 +44,18 @@ type oidcConfig struct {
 	IssuerURL    string `yaml:"issuerUrl" json:"issuerUrl"`
 }
 
+type repoConfig struct {
+	URL              string `yaml:"url" json:"url"`
+	Folder           string `yaml:"folder" json:"folder"`
+	MainBranch       string `yaml:"mainBranch" json:"mainBranch"`
+	Username         string `yaml:"username" json:"username"`
+	PrivateDeployKey string `yaml:"privateDeployKey" json:"privateDeployKey"`
+}
+
 type githubConfig struct {
-	Repo                string `yaml:"repo" json:"repo"`
-	Folder              string `yaml:"folder" json:"folder"`
-	MainBranch          string `yaml:"mainBranch" json:"mainBranch"`
-	PersonalAccessToken string `yaml:"personalAccessToken"`
-	ClientID            string `yaml:"clientId" json:"clientId"`
-	ClientSecret        string `yaml:"clientSecret" json:"clientSecret"`
+	PublicKey    []byte `yaml:"publicKey"`
+	ClientID     string `yaml:"clientId" json:"clientId"`
+	ClientSecret string `yaml:"clientSecret" json:"clientSecret"`
 }
 
 func (c *config) Load(filePath string) error {

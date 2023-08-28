@@ -14,17 +14,11 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/adrg/frontmatter"
 	"github.com/geekgonecrazy/rfd-tool/models"
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
-	"go.abhg.dev/goldmark/mermaid"
+	"github.com/geekgonecrazy/rfd-tool/renderer"
 )
 
 var validRFDNumber *regexp.Regexp
-var md goldmark.Markdown
 var server string
 var token string
 
@@ -33,21 +27,6 @@ func main() {
 	importFolder := flag.Bool("import", false, "import folder")
 	folder := flag.String("folder", "", "rfd folder")
 	flag.Parse()
-
-	md = goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			&mermaid.Extender{
-				//RenderMode: mermaid.RenderModeServer,
-			},
-		),
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(),
-		),
-		goldmark.WithRendererOptions(
-			html.WithHardWraps(),
-		),
-	)
 
 	r, _ := regexp.Compile(`^\d{4}`)
 
@@ -160,25 +139,14 @@ func getRFD(rfdDir string, rfdNum string, bulk bool) (*models.RFD, error) {
 	}
 	defer f.Close()
 
-	rfd := models.RFD{}
-
-	body, err := frontmatter.Parse(f, &rfd)
+	rfd, err := renderer.RenderRFD(rfdNum, f)
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	if err := md.Convert([]byte(body), &buf); err != nil {
-		return nil, err
-	}
-
-	rfd.ID = rfdNum
-	rfd.ContentMD = string(body)
-	rfd.Content = string(buf.Bytes())
 
 	if !bulk && rfd.State != models.Ideation && rfd.State != models.PreDiscussion && rfd.Discussion == "" {
 		return nil, errors.New("discussion link required")
 	}
 
-	return &rfd, nil
+	return rfd, nil
 }

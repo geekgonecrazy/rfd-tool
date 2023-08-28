@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -43,8 +44,32 @@ func GetRFDHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, rfd)
 }
 
-// CreateRFDHandler create rfd
 func CreateRFDHandler(c *gin.Context) {
+	rfdUI := c.Query("rfdui")
+
+	var createPayload models.RFDCreatePayload
+
+	if err := c.ShouldBind(&createPayload); err != nil {
+		handleErrorJSON(c, "error parsing payload", err)
+		return
+	}
+
+	rfd, err := core.CreateRFD(&createPayload)
+	if err != nil {
+		handleErrorJSON(c, "error creating RFD", err)
+		return
+	}
+
+	if rfdUI == "true" {
+		c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/created?rfd=%s", rfd.ID))
+		return
+	}
+
+	c.JSON(http.StatusCreated, rfd)
+}
+
+// CreateOrUpdateRFDHandler create rfd
+func CreateOrUpdateRFDHandler(c *gin.Context) {
 	var rfd models.RFD
 	if err := c.BindJSON(&rfd); err != nil {
 		handleErrorJSON(c, "creating rfd", err)
@@ -53,7 +78,7 @@ func CreateRFDHandler(c *gin.Context) {
 
 	log.Println(rfd)
 
-	if err := core.CreateRFD(&rfd); err != nil {
+	if err := core.CreateOrUpdateRFD(&rfd); err != nil {
 		handleErrorJSON(c, "creating rfd", err)
 		return
 	}

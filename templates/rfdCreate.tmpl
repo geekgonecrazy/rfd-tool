@@ -1,0 +1,27 @@
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="/assets/main.css">
+    <title>{{.siteName}}</title>
+</head>
+
+<body>
+    <div class="rfd ">
+        <div class="logo"><a href="/"><img src="/assets/logo.svg"></a></div>
+       
+       <form action="/api/v1/rfds?rfdUI=true" method="post">
+            <label for="title">Title</label>
+            <input type="text" name="title" />
+
+            <label for="authors">Authors (Comma Seperated)</label>
+            <input type="text" name="authors" />
+
+            <label for="tags">Tags (Comma Seperated)</label>
+            <input type="text" name="tags" />
+
+            <button type="submit">Create</button>
+        </form>
+    </div>
+</body>
+
+</html>
