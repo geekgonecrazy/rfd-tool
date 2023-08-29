@@ -40,6 +40,8 @@ repo:
   url: https://github.com/geekgonecrazy/rfd-example
   folder: rfds
   mainBranch: main
+  commitAuthorName: RFD-Tool
+  commitAuthorEmail: rfdtool@yourorg.com
   privateDeployKey: |
     # ssh-keygen -t rsa
     # upload the other to repo deployment with write access

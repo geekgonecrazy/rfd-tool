@@ -7,6 +7,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/adrg/frontmatter"
 	"github.com/geekgonecrazy/rfd-tool/config"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"gopkg.in/yaml.v2"
 )
@@ -156,10 +158,17 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 		return nil, err
 	}
 
+	log.Println("Get Author Signature")
+	author := object.Signature{
+		Name:  config.Config.Repo.CommitAuthorName,
+		Email: config.Config.Repo.CommitAuthorEmail,
+		When:  time.Now(),
+	}
+
 	commitMsg := fmt.Sprintf("Creating RFD %s", rfdNum)
 
 	log.Println("Committing: ", commitMsg)
-	_, err = worktree.Commit(commitMsg, &git.CommitOptions{})
+	_, err = worktree.Commit(commitMsg, &git.CommitOptions{Author: &author})
 	if err != nil {
 		return nil, err
 	}

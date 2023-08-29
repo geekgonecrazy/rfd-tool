@@ -45,11 +45,13 @@ type oidcConfig struct {
 }
 
 type repoConfig struct {
-	URL              string `yaml:"url" json:"url"`
-	Folder           string `yaml:"folder" json:"folder"`
-	MainBranch       string `yaml:"mainBranch" json:"mainBranch"`
-	Username         string `yaml:"username" json:"username"`
-	PrivateDeployKey string `yaml:"privateDeployKey" json:"privateDeployKey"`
+	URL               string `yaml:"url" json:"url"`
+	Folder            string `yaml:"folder" json:"folder"`
+	MainBranch        string `yaml:"mainBranch" json:"mainBranch"`
+	Username          string `yaml:"username" json:"username"`
+	CommitAuthorName  string `yaml:"commitAuthorName" json:"commitAuthorName"`
+	CommitAuthorEmail string `yaml:"commitAuthorEmail" json:"commitAuthorEmail"`
+	PrivateDeployKey  string `yaml:"privateDeployKey" json:"privateDeployKey"`
 }
 
 type githubConfig struct {
