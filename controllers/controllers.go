@@ -22,9 +22,9 @@ func handleError(c *gin.Context, verboseMsg string, reportedError error) {
 }
 
 func handleErrorJSON(c *gin.Context, verboseMsg string, err error) {
-	id, err := utils.NewUUID()
-	if err != nil {
-		log.Println("Error Generating Error Code", err)
+	id, err2 := utils.NewUUID()
+	if err2 != nil {
+		log.Println("Error Generating Error Code", err2)
 	}
 
 	log.Println(fmt.Sprintf("Error: %s Verbose: %s Error: ", id, verboseMsg), err)
