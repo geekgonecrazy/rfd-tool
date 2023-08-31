@@ -81,6 +81,14 @@ pre.mermaid {
     max-width: 100%;
 }
 
+.rfd .anchor {
+    visibility: hidden;
+}
+
+.rfd h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor {
+    visibility: visible;
+}
+
 .lbtn .logo {
     height: 64px;
 }

@@ -5,11 +5,14 @@ import (
 	"io"
 
 	"github.com/adrg/frontmatter"
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/geekgonecrazy/rfd-tool/models"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"go.abhg.dev/goldmark/anchor"
 	"go.abhg.dev/goldmark/mermaid"
 )
 
@@ -22,6 +25,16 @@ func init() {
 			&mermaid.Extender{
 				//RenderMode: mermaid.RenderModeServer,
 			},
+			&anchor.Extender{
+				Texter:   anchor.Text("#"),
+				Position: anchor.After,
+			},
+			highlighting.NewHighlighting(
+				highlighting.WithStyle("monokai"),
+				highlighting.WithFormatOptions(
+					chromahtml.WithLineNumbers(false),
+				),
+			),
 		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
