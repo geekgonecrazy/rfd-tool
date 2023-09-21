@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/core"
@@ -48,6 +49,22 @@ func getSessionFromCookieOrHeader(c *gin.Context) {
 	if session.User.LoggedIn {
 		c.Set("loggedIn", true)
 		c.Set("userEmail", session.User.Email)
+	}
+
+	c.Next()
+}
+
+func _debugBypassEmptyLogin(c *gin.Context) {
+	if c.GetBool("loggedIn") {
+		c.Next()
+		return
+	}
+
+	bypassLogin := os.Getenv("RFD_BYPASS_EMPTY_LOGIN") == "true" && gin.IsDebugging()
+
+	if (bypassLogin) {
+		c.Set("loggedIn", true);
+		c.Set("userEmail", "dev@rfdtool.com")
 	}
 
 	c.Next()
