@@ -11,11 +11,11 @@ import (
 	"github.com/geekgonecrazy/rfd-tool/utils"
 )
 
-func GetOIDCAuthorizationURL(resume_url string) (authorizationURL string, token string, expireAt int, err error) {
+func GetOIDCAuthorizationURL(resume_url string) (authorizationURL string, token string, expireSeconds int, err error) {
 
 	u, err := url.Parse(resume_url)
 	if err != nil {
-		return authorizationURL, token, expireAt, err
+		return authorizationURL, token, expireSeconds, err
 	}
 
 	if u.Path == "" {
@@ -24,51 +24,53 @@ func GetOIDCAuthorizationURL(resume_url string) (authorizationURL string, token 
 
 	state, err := utils.NewUUID()
 	if err != nil {
-		return authorizationURL, token, expireAt, err
+		return authorizationURL, token, expireSeconds, err
 	}
 
 	authorizationURL = _oidcOAuth.AuthCodeURL(state)
 
-	token, expireAt, err = CreateStateSessionToken(state, u.Path, "oidc")
+	sessionToken, expiry, err := CreateStateSessionToken(state, u.Path, "oidc")
 	if err != nil {
-		return authorizationURL, token, expireAt, err
+		return authorizationURL, token, expireSeconds, err
 	}
 
-	return authorizationURL, token, expireAt, nil
+	expireSeconds = int(time.Now().Sub(expiry).Seconds())
+
+	return authorizationURL, sessionToken, expireSeconds, nil
 }
 
-func OIDCExchangeAuthorizationToken(state string, tokenString string, code string) (token string, expiry int, url string, err error) {
+func OIDCExchangeAuthorizationToken(state string, tokenString string, code string) (token string, expireSeconds int, url string, err error) {
 
 	sessionToken, err := ReadSessionToken(tokenString)
 	if err != nil {
-		return token, expiry, url, err
+		return token, expireSeconds, url, err
 	}
 
 	if state != sessionToken.OAuthState {
-		return token, expiry, url, errors.New("invalid state")
+		return token, expireSeconds, url, errors.New("invalid state")
 	}
 
 	returnedToken, err := _oidcOAuth.Exchange(context.TODO(), code)
 	if err != nil {
-		return token, expiry, url, err
+		return token, expireSeconds, url, err
 	}
 
 	// Extract the ID Token from OAuth2 token.
 	rawIDToken, ok := returnedToken.Extra("id_token").(string)
 	if !ok {
-		return token, expiry, url, errors.New("no id_token")
+		return token, expireSeconds, url, errors.New("no id_token")
 	}
 
 	// Parse and verify ID Token payload.
 	idToken, err := _oidcVerifier.Verify(context.TODO(), rawIDToken)
 	if err != nil {
-		return token, expiry, url, err
+		return token, expireSeconds, url, err
 	}
 
 	claims := models.IDTokenClaims{}
 
 	if err := idToken.Claims(&claims); err != nil {
-		return token, expiry, url, err
+		return token, expireSeconds, url, err
 	}
 
 	log.Println(claims)
@@ -77,12 +79,12 @@ func OIDCExchangeAuthorizationToken(state string, tokenString string, code strin
 	sessionToken.User.Email = claims.Email
 	sessionToken.User.Name = claims.Email
 
-	token, err = EncodeSessionToken(*sessionToken)
+	token, expiry, err := EncodeSessionToken(*sessionToken, returnedToken.Expiry)
 	if err != nil {
-		return token, expiry, url, err
+		return token, expireSeconds, url, err
 	}
 
-	secondsToExpire := time.Until(returnedToken.Expiry)
+	expireSeconds = int(time.Now().Sub(expiry).Seconds())
 
-	return token, int(secondsToExpire), sessionToken.ResumeURL, nil
+	return token, expireSeconds, sessionToken.ResumeURL, nil
 }

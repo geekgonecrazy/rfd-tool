@@ -7,13 +7,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func CreateStateSessionToken(state string, resumeURL string, authMethod string) (string, int, error) {
-	expireAt := int(1 * time.Hour)
+const defaultSessionDuration = time.Duration(1 * time.Hour)
+
+func CreateStateSessionToken(state string, resumeURL string, authMethod string) (string, time.Time, error) {
+	expireAt := time.Now().Add(defaultSessionDuration)
 
 	sessionToken := models.SessionToken{
 		OAuthState:  state,
 		OAuthMethod: authMethod,
 		ResumeURL:   resumeURL,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expireAt),
+		},
 	}
 
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, sessionToken).SignedString(_jwtPrivateKey)
@@ -24,13 +29,15 @@ func CreateStateSessionToken(state string, resumeURL string, authMethod string) 
 	return token, expireAt, nil
 }
 
-func EncodeSessionToken(sessionToken models.SessionToken) (string, error) {
+func EncodeSessionToken(sessionToken models.SessionToken, expiry time.Time) (string, time.Time, error) {
+	sessionToken.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(expiry)
+
 	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, sessionToken).SignedString(_jwtPrivateKey)
 	if err != nil {
-		return "", err
+		return "", expiry, err
 	}
 
-	return token, nil
+	return token, expiry, nil
 }
 
 func ReadSessionToken(tokenString string) (*models.SessionToken, error) {
