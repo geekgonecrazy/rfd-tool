@@ -34,7 +34,7 @@ func GetOIDCAuthorizationURL(resume_url string) (authorizationURL string, token 
 		return authorizationURL, token, expireSeconds, err
 	}
 
-	expireSeconds = int(time.Now().Sub(expiry).Seconds())
+	expireSeconds = int(time.Until(expiry).Seconds())
 
 	return authorizationURL, sessionToken, expireSeconds, nil
 }
@@ -84,7 +84,8 @@ func OIDCExchangeAuthorizationToken(state string, tokenString string, code strin
 		return token, expireSeconds, url, err
 	}
 
-	expireSeconds = int(time.Now().Sub(expiry).Seconds())
+	// Get expiration seconds by subtracting the future expire
+	expireSeconds = int(time.Until(expiry).Seconds())
 
 	return token, expireSeconds, sessionToken.ResumeURL, nil
 }
