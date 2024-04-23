@@ -20,6 +20,7 @@ func Run() error {
 	router.GET("/oidc/callback", controllers.OIDCCallbackHandler)
 
 	router.Use(getSessionFromCookieOrHeader)
+	router.Use(_debugBypassEmptyLogin)
 
 	api := router.Group("/api/v1")
 	{
