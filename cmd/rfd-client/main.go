@@ -36,6 +36,8 @@ func main() {
 		panic("no valid RFD passed.  Use --rfd=rfdnumber")
 	}
 
+	validatedRfdNum := r.FindString(*rfdNum)
+
 	server = os.Getenv("RFD_SERVER")
 	token = os.Getenv("RFD_TOKEN")
 
@@ -56,15 +58,13 @@ func main() {
 		return
 	}
 
-	if *rfdNum != "" {
-		rfdDir := *folder
-		rfd, err := getRFD(rfdDir, *rfdNum, false)
-		if err != nil {
-			panic(err)
-		}
-
-		sendRFD(rfd)
+	rfdDir := *folder
+	rfd, err := getRFD(rfdDir, validatedRfdNum, false)
+	if err != nil {
+		panic(err)
 	}
+
+	sendRFD(rfd)
 }
 
 func sendRFD(rfd *models.RFD) error {
