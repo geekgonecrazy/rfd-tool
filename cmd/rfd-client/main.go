@@ -36,6 +36,8 @@ func main() {
 		panic("no valid RFD passed.  Use --rfd=rfdnumber")
 	}
 
+	rfdNum = r.FindString(rfdNum)
+
 	server = os.Getenv("RFD_SERVER")
 	token = os.Getenv("RFD_TOKEN")
 
