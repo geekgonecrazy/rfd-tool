@@ -7,6 +7,7 @@ import (
 	"github.com/adrg/frontmatter"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/geekgonecrazy/rfd-tool/models"
+	"github.com/geekgonecrazy/rfd-tool/renderer/d2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
@@ -25,6 +26,7 @@ func init() {
 			&mermaid.Extender{
 				//RenderMode: mermaid.RenderModeServer,
 			},
+			&d2.Extender{},
 			&anchor.Extender{
 				Texter:   anchor.Text("#"),
 				Position: anchor.After,
