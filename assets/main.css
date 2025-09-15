@@ -45,6 +45,24 @@ pre.mermaid {
     background-color: white;
 }
 
+.d2-diagram {
+    background-color: white;
+    padding: 10px;
+    border-radius: 3px;
+    margin: 16px 0;
+    text-align: center;
+}
+
+.d2-diagram svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.d2-error {
+    background-color: #ff4757 !important;
+    color: white;
+}
+
 .rfd {
     padding: 20px;
     background-color: #393e46;

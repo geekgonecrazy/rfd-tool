@@ -7,6 +7,7 @@ import (
 	"github.com/adrg/frontmatter"
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/geekgonecrazy/rfd-tool/models"
+	"github.com/geekgonecrazy/rfd-tool/renderer/d2"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
@@ -22,6 +23,7 @@ func init() {
 	md = goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
+			&d2.Extender{}, // Add d2 before other extensions
 			&mermaid.Extender{
 				//RenderMode: mermaid.RenderModeServer,
 			},
