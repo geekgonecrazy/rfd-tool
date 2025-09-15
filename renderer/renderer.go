@@ -23,10 +23,10 @@ func init() {
 	md = goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
+			&d2.Extender{}, // Add d2 before other extensions
 			&mermaid.Extender{
 				//RenderMode: mermaid.RenderModeServer,
 			},
-			&d2.Extender{},
 			&anchor.Extender{
 				Texter:   anchor.Text("#"),
 				Position: anchor.After,

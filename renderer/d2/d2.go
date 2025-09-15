@@ -147,12 +147,12 @@ type Extender struct{}
 func (e *Extender) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(
 		parser.WithASTTransformers(
-			util.Prioritized(&Transformer{}, 100),
+			util.Prioritized(&Transformer{}, 200), // Higher priority than syntax highlighting
 		),
 	)
 	m.Renderer().AddOptions(
 		renderer.WithNodeRenderers(
-			util.Prioritized(&Renderer{}, 100),
+			util.Prioritized(&Renderer{}, 200), // Higher priority than syntax highlighting
 		),
 	)
 }
