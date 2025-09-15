@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS build
+FROM golang:1.24-alpine AS build
 
 RUN apk add --no-cache ca-certificates git
 WORKDIR /go/src/github.com/geekgonecrazy/rfd-tool
@@ -9,7 +9,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./cmd/rfd-server
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./cmd/rfd-client
 
-FROM scratch as runtime
+FROM scratch AS runtime
 
 ARG GIN_MODE=release
 ENV GIN_MODE=$GIN_MODE

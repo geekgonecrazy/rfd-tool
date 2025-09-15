@@ -2,8 +2,6 @@ module github.com/geekgonecrazy/rfd-tool
 
 go 1.24
 
-toolchain go1.24.7
-
 require (
 	github.com/RocketChat/Rocket.Chat.Go.SDK v0.0.0-20221121042443-a3fd332d56d9
 	github.com/adrg/frontmatter v0.2.0
