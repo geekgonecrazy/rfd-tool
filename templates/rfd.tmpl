@@ -1,26 +1,66 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.rfd.Title}} | {{.siteName}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/assets/main.css">
-    <title>{{.siteName}}</title>
 </head>
-
 <body>
-    <div class="rfd ">
-        <div class="logo"><a href="/"><img src="/assets/logo.svg"></a></div>
-        <span class="state">{{.rfd.State}}</span>
-        <h1>{{.rfd.ID}} {{.rfd.Title}}</h1>
-        <div>Authors: {{ range $i, $author := .rfd.Authors }}{{if $i}}, {{end}}{{$author}}{{end}}</div>
-        {{if .rfd.Tags}}
-        <div>Tags: {{ range $i, $tag := .rfd.Tags }}{{if $i}}, {{end}}<a href="/tag/{{$tag}}">{{$tag}}</a>{{end}}</div>
-        {{end}}
+    <div class="rfd">
+        <header class="rfd-detail-header">
+            <div class="logo">
+                <a href="/"><img src="/assets/logo.svg"></a>
+            </div>
 
-        {{if .rfd.Discussion}}
-        <div>Discuss: <a href="{{.rfd.Discussion}}">here</a></div>
-        {{end}}
+            <div class="detail-header-content">
+                <div class="detail-title-wrapper">
+                    <span class="detail-id">#{{ .rfd.ID }}</span>
+                    <h1 class="detail-title">{{ .rfd.Title }}</h1>
+                </div>
 
-        {{.content}}
+                <div class="detail-meta-info">
+                    <div class="detail-meta-row">
+                        <span class="state-badge state-{{ .rfd.State }}">{{ .rfd.State }}</span>
+                        <div class="authors-list">
+                            {{ range $i, $author := .rfd.Authors }}
+                            <div class="author-item" title="{{$author}}">
+                                <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                <span>{{$author}}</span>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                    <div class="detail-meta-row">
+                        {{if .rfd.Tags}}
+                        <div class="tags-list">
+                            {{ range $i, $tag := .rfd.Tags }}
+                            <a href="/tag/{{$tag}}" class="tag-item">{{$tag}}</a>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                     {{if .rfd.Discussion}}
+                    <div class="detail-meta-row">
+                       <div class="discussion-link">
+                           <a href="{{.rfd.Discussion}}" target="_blank" rel="noopener noreferrer">
+                               <svg fill="currentColor" viewBox="0 0 20 20"><path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path><path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h1a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path></svg>
+                               <span>Discuss here</span>
+                           </a>
+                       </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </header>
+
+        <main class="rfd-content">
+            {{.content}}
+        </main>
+
     </div>
 </body>
-
 </html>

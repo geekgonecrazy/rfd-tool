@@ -1,37 +1,68 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-    <link rel="stylesheet" type="text/css" href="/assets/main.css">
     <title>{{.siteName}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="/assets/main.css">
 </head>
 
 <body>
     <div class="rfd">
-        <div class="logo"><a href="/"><img src="/assets/logo.svg"></a></div>
-        {{if .tagFilter}}
-        <h3>Results for tag: {{.tagFilter}}
-        {{end}}
+        <header class="rfd-header">
+            <div class="logo">
+                <a href="/"><img src="/assets/logo.svg"></a>
+            </div>
+            <div class="rfd-header-bar">
+                 <h1 class="rfd-title">Architecture Decision Records</h1>
+                 <a href="/create" class="create-button">
+                     <span>&#10133;</span><span class="create-button-text">Create New</span>
+                 </a>
+            </div>
+            {{if .tagFilter}}
+            <h3 class="tag-filter-title">Results for tag: {{.tagFilter}}</h3>
+            {{end}}
+        </header>
 
-        <table>
-            <thead>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Tags</th>
-                <th>State</th>
-                <th><a href="/create">➕ Create</a></th>
-            </thead>
-            <tbody>
-                {{ range $index, $rfd := .rfds }}
-                <tr>
-                    <td><a href="/{{ $rfd.ID }}">{{ $rfd.ID }}</a>
-                    <td>{{ $rfd.Title }}</td>
-                    <td>{{ range $i, $tag := $rfd.Tags }}{{if $i}}, {{end}}<a href="/tag/{{$tag}}">{{$tag}}</a>{{end}}</td>
-                    <td>{{ $rfd.State }}</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+        <main class="rfd-list">
+            {{ range $index, $rfd := .rfds }}
+            <div class="rfd-card">
+                <div class="rfd-card-main">
+                    <div class="rfd-card-header">
+                        <span class="rfd-id">#{{ $rfd.ID }}</span>
+                        <h2 class="rfd-card-title">
+                            <a href="/{{ $rfd.ID }}" title="{{ $rfd.Title }}">{{ $rfd.Title }}</a>
+                        </h2>
+                    </div>
+
+                    <div class="rfd-card-meta">
+                        <!-- Authors from template -->
+                        <div class="authors-list">
+                             {{ range $i, $author := $rfd.Authors }}
+                                <div class="author-item" title="{{$author}}">
+                                    <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                    <span>{{$author}}</span>
+                                </div>
+                             {{end}}
+                        </div>
+                        <!-- Tags from template -->
+                        <div class="tags-list">
+                             {{ range $i, $tag := $rfd.Tags }}
+                                <a href="/tag/{{$tag}}" class="tag-item">{{$tag}}</a>
+                             {{end}}
+                        </div>
+                    </div>
+
+                </div>
+                <div class="rfd-card-status">
+                    <span class="state-badge state-{{ $rfd.State }}">{{ $rfd.State }}</span>
+                </div>
+            </div>
+            {{end}}
+        </main>
     </div>
 </body>
-
 </html>
