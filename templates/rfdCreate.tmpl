@@ -1,33 +1,43 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New RFD | {{.siteName}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="/assets/main.css">
-    <title>{{.siteName}}</title>
 </head>
-
 <body>
-    <div class="rfd ">
-        <div class="logo"><a href="/"><img src="/assets/logo.svg"></a></div>
-       
-       <form action="/api/v1/rfds?rfdui=true" method="post">
-            <div>
-                <label for="title">Title</label>
-                <input type="text" name="title" />
+    <div class="rfd">
+        <header class="create-page-header">
+            <div class="logo">
+                <a href="/"><img src="/assets/logo.svg" alt="Rocket.Chat Logo"></a>
             </div>
+        </header>
 
-            <div>
-                <label for="authors">Authors (Comma Seperated)</label>
-                <input type="text" name="authors" />
-            </div>
+        <main class="create-form-container">
+            <h1 class="create-form-title">Create New RFD</h1>
+            <form action="/api/v1/rfds?rfdui=true" method="post" class="create-form">
+                <div class="form-field">
+                    <label for="title" class="form-label">Title</label>
+                    <input type="text" id="title" name="title" class="form-input" required />
+                </div>
 
-            <div>
-                <label for="tags">Tags (Comma Seperated)</label>
-                <input type="text" name="tags" />
-            </div>
+                <div class="form-field">
+                    <label for="authors" class="form-label">Authors (Comma Separated)</label>
+                    <input type="text" id="authors" name="authors" class="form-input" required />
+                </div>
 
-            <button type="submit">Create</button>
-        </form>
+                <div class="form-field">
+                    <label for="tags" class="form-label">Tags (Comma Separated)</label>
+                    <input type="text" id="tags" name="tags" class="form-input" />
+                </div>
+
+                <button type="submit" class="submit-button">Create</button>
+            </form>
+        </main>
     </div>
 </body>
-
 </html>
