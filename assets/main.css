@@ -505,3 +505,40 @@ code {
 .submit-button:hover {
     background-color: #3182ce;
 }
+
+/* === LOGIN PAGE STYLES === */
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    gap: 2rem;
+}
+
+.login-form-container {
+    background-color: #393e46;
+    border-radius: 0.5rem;
+    padding: 2.5rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.login-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #f7fafc;
+    margin: 0 0 0.5rem 0;
+    text-align: center;
+}
+
+.login-subtitle {
+    font-size: 1rem;
+    color: #a0aec0;
+    margin: 0 0 2rem 0;
+    text-align: center;
+}
+
