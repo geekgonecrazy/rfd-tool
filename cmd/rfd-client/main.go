@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -154,10 +153,6 @@ func getRFD(rfdDir string, rfdNum string, bulk bool) (*models.RFD, error) {
 	rfd, err := renderer.RenderRFD(rfdNum, f)
 	if err != nil {
 		return nil, err
-	}
-
-	if !bulk && rfd.State != models.Ideation && rfd.State != models.PreDiscussion && rfd.Discussion == "" {
-		return nil, errors.New("discussion link required")
 	}
 
 	return rfd, nil
