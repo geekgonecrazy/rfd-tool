@@ -109,3 +109,33 @@ func (s *boltStore) UpdateRFD(rfd *models.RFD) error {
 
 	return tx.Commit()
 }
+
+// ImportRFD imports an RFD with an arbitrary ID (for bulk imports from existing repos)
+func (s *boltStore) ImportRFD(rfd *models.RFD) error {
+	tx, err := s.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	bucket := tx.Bucket(rfdBucket)
+
+	rfd.CreatedAt = time.Now()
+	rfd.ModifiedAt = time.Now()
+
+	buf, err := json.Marshal(rfd)
+	if err != nil {
+		return err
+	}
+
+	if err := bucket.Put([]byte(rfd.ID), buf); err != nil {
+		return err
+	}
+
+	// Update next ID if this ID is >= current next ID
+	if err := s.UpdateNextRFDIDIfNeeded(tx, rfd.ID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}

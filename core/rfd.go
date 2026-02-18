@@ -298,7 +298,8 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 		return updateRFD(existingRFD, rfd)
 	}
 
-	if err := _dataStore.CreateRFD(rfd); err != nil {
+	// Use ImportRFD to allow arbitrary IDs (for bulk imports from existing repos)
+	if err := _dataStore.ImportRFD(rfd); err != nil {
 		return err
 	}
 

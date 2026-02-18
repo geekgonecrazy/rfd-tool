@@ -8,6 +8,7 @@ type Store interface {
 	GetRFDByID(id string) (*models.RFD, error)
 	CreateRFD(rfd *models.RFD) error
 	UpdateRFD(sponsorship *models.RFD) error
+	ImportRFD(rfd *models.RFD) error
 
 	GetTags() ([]models.Tag, error)
 	GetTag(tag string) (*models.Tag, error)

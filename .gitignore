@@ -9,8 +9,8 @@ deploy_key.pub
 
 # Build artifacts
 vendor
-rfd-server
-rfd-client
+/rfd-server
+/rfd-client
 
 # Data
 data/
