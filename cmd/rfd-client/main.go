@@ -37,7 +37,7 @@ func main() {
 	validRFDNumber = r
 
 	if *rfdNum != "" && !validRFDNumber.Match([]byte(*rfdNum)) {
-		panic("no valid RFD passed.  Use --rfd=rfdnumber")
+		fatal("Invalid RFD number '%s'. Use --rfd=NNNN (4 digit number)", *rfdNum)
 	}
 
 	validatedRfdNum := r.FindString(*rfdNum)
@@ -46,17 +46,19 @@ func main() {
 	token = os.Getenv("RFD_TOKEN")
 
 	if server == "" || token == "" {
-		panic("Please ensure you provide RFD_SERVER and RFD_TOKEN")
+		fatal("Missing environment variables. Please set RFD_SERVER and RFD_TOKEN")
 	}
 
 	if *importFolder {
 		rfds, err := getRFDs(*folder)
 		if err != nil {
-			panic(err)
+			fatal("Failed to read RFDs from folder: %v", err)
 		}
 
 		for _, rfd := range rfds {
-			sendRFD(&rfd)
+			if err := sendRFD(&rfd); err != nil {
+				log.Printf("Warning: failed to send RFD %s: %v", rfd.ID, err)
+			}
 		}
 
 		return
@@ -64,18 +66,33 @@ func main() {
 
 	if *importBranches {
 		if err := importFromBranches(*repoPath, *rfdFolder); err != nil {
-			panic(err)
+			fatal("Failed to import from branches: %v", err)
 		}
 		return
+	}
+
+	if *folder == "" {
+		fatal("Please specify --folder")
+	}
+
+	if validatedRfdNum == "" {
+		fatal("Please specify --rfd=NNNN")
 	}
 
 	rfdDir := *folder
 	rfd, err := getRFD(rfdDir, validatedRfdNum, false)
 	if err != nil {
-		panic(err)
+		fatal("Failed to read RFD %s: %v", validatedRfdNum, err)
 	}
 
-	sendRFD(rfd)
+	if err := sendRFD(rfd); err != nil {
+		fatal("Failed to send RFD %s: %v", validatedRfdNum, err)
+	}
+}
+
+func fatal(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "Error: "+format+"\n", args...)
+	os.Exit(1)
 }
 
 func sendRFD(rfd *models.RFD) error {
@@ -144,9 +161,10 @@ func getRFDs(worktree string) ([]models.RFD, error) {
 }
 
 func getRFD(rfdDir string, rfdNum string, bulk bool) (*models.RFD, error) {
-	f, err := os.Open(filepath.Join(rfdDir, rfdNum, "README.md"))
+	path := filepath.Join(rfdDir, rfdNum, "README.md")
+	f, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("could not open %s: %w", path, err)
 	}
 	defer f.Close()
 
