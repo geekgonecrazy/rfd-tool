@@ -46,6 +46,22 @@ func GetAuthorByEmail(email string) (*models.Author, error) {
 	return _dataStore.GetAuthorByEmail(email)
 }
 
+// normalizeTags normalizes all tags in a slice
+func normalizeTags(tags []string) []string {
+	seen := make(map[string]bool)
+	normalized := make([]string, 0, len(tags))
+	
+	for _, tag := range tags {
+		n := models.NormalizeTag(tag)
+		if n != "" && !seen[n] {
+			seen[n] = true
+			normalized = append(normalized, n)
+		}
+	}
+	
+	return normalized
+}
+
 // normalizeAndStoreAuthors parses author strings, stores in authors table,
 // and returns normalized author identifiers (emails when available)
 func normalizeAndStoreAuthors(authors []string) []string {
@@ -331,6 +347,9 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 	// Normalize authors and extract to authors table
 	normalizedAuthors := normalizeAndStoreAuthors(rfd.Authors)
 	rfd.Authors = normalizedAuthors
+
+	// Normalize tags
+	rfd.Tags = normalizeTags(rfd.Tags)
 
 	existingRFD, err := _dataStore.GetRFDByID(rfd.ID)
 	if err != nil {
