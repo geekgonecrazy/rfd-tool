@@ -6,6 +6,7 @@ import "github.com/geekgonecrazy/rfd-tool/models"
 type Store interface {
 	GetRFDs() ([]models.RFD, error)
 	GetRFDByID(id string) (*models.RFD, error)
+	GetRFDsByAuthor(author string) ([]models.RFD, error)
 	CreateRFD(rfd *models.RFD) error
 	UpdateRFD(sponsorship *models.RFD) error
 	ImportRFD(rfd *models.RFD) error

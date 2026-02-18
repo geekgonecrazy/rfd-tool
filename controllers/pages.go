@@ -19,6 +19,24 @@ func DefaultRouteHandler(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/login")
 }
 
+// AuthorListPageHandler filters RFDs by author
+func AuthorListPageHandler(c *gin.Context) {
+	author := c.Param("author")
+
+	if author == "" {
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
+	}
+
+	rfds, err := core.GetRFDsByAuthor(author)
+	if err != nil {
+		handleError(c, "getting rfds by author", err)
+		return
+	}
+
+	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds, "authorFilter": author})
+}
+
 // TagListPageHandler Will tag the tag provided and filter RFDs down to matching
 func TagListPageHandler(c *gin.Context) {
 

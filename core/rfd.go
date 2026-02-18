@@ -34,6 +34,10 @@ func GetTags() ([]models.Tag, error) {
 	return tags, nil
 }
 
+func GetRFDsByAuthor(author string) ([]models.RFD, error) {
+	return _dataStore.GetRFDsByAuthor(author)
+}
+
 func GetRFDsByTag(tag string) ([]models.RFD, error) {
 	t, err := _dataStore.GetTag(tag)
 	if err != nil {

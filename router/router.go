@@ -37,6 +37,7 @@ func Run() error {
 
 	// Server Side Rendered Pages
 	router.GET("/tag/:tag", requireSession, controllers.TagListPageHandler)
+	router.GET("/author/:author", requireSession, controllers.AuthorListPageHandler)
 	router.GET("/:id", requireSession, controllers.RFDPageHandler)
 
 	router.GET("/create", requireSession, controllers.RFDCreatePageHandler)
