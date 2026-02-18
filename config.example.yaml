@@ -47,6 +47,7 @@ repo:
     # upload the other to repo deployment with write access
 
 dataPath: ./
+store: sqlite  # sqlite or boltdb (default: sqlite)
 oidc:
   clientId: #clientId
   clientSecret: #clientSecret
