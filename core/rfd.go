@@ -15,6 +15,7 @@ import (
 	"github.com/geekgonecrazy/rfd-tool/renderer"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/storage/memory"
@@ -267,12 +268,47 @@ func UpdateRFDDiscussionInRepo(rfdNum string, discussionURL string) error {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	// Try to checkout the RFD's branch if it exists, otherwise use main
+	// Try to fetch and checkout the RFD's branch if it exists, otherwise use main
 	branchRef := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", rfdNum))
-	err = worktree.Checkout(&git.CheckoutOptions{Branch: branchRef})
+	remoteRef := plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", rfdNum))
+
+	// Fetch the specific branch
+	err = r.Fetch(&git.FetchOptions{
+		RemoteName: "origin",
+		RefSpecs:   []gitconfig.RefSpec{gitconfig.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", rfdNum, rfdNum))},
+		Auth:       _gitPublicKeys,
+	})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		// Branch might not exist remotely, that's okay
+		log.Printf("Could not fetch branch %s: %v", rfdNum, err)
+	}
+
+	// Try to checkout the branch
+	err = worktree.Checkout(&git.CheckoutOptions{
+		Branch: branchRef,
+		Create: true,
+		Force:  true,
+	})
 	if err != nil {
-		// Branch doesn't exist, stay on main branch
-		log.Printf("RFD %s branch not found, updating on main branch", rfdNum)
+		// Try checking out from remote ref
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Branch: remoteRef,
+			Create: false,
+			Force:  true,
+		})
+		if err != nil {
+			// Branch doesn't exist, stay on main branch
+			log.Printf("RFD %s branch not found, updating on main branch", rfdNum)
+		} else {
+			// Create local branch from remote
+			err = worktree.Checkout(&git.CheckoutOptions{
+				Branch: branchRef,
+				Create: true,
+			})
+			if err != nil {
+				log.Printf("Failed to create local branch %s: %v", rfdNum, err)
+			}
+		}
 	}
 
 	// Read the RFD file
