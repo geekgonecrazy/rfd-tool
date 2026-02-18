@@ -32,14 +32,14 @@ func (s *sqliteStore) GetRFDs() ([]models.RFD, error) {
 	return rfds, rows.Err()
 }
 
-func (s *sqliteStore) GetRFDsByAuthor(author string) ([]models.RFD, error) {
-	// Search for author in the JSON array
+func (s *sqliteStore) GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) {
+	// Search for author in the JSON array (matches email or name)
 	rows, err := s.db.Query(`
 		SELECT id, title, authors, state, discussion, tags, content, content_md, created_at, modified_at
 		FROM rfds
 		WHERE authors LIKE ?
 		ORDER BY id ASC
-	`, "%"+author+"%")
+	`, "%"+authorQuery+"%")
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *sqliteStore) GetRFDsByAuthor(author string) ([]models.RFD, error) {
 		}
 		// Double-check exact author match (LIKE can match partial)
 		for _, a := range rfd.Authors {
-			if a == author {
+			if a == authorQuery {
 				rfds = append(rfds, *rfd)
 				break
 			}

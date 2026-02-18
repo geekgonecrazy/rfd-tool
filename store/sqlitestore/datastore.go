@@ -76,6 +76,12 @@ func (s *sqliteStore) migrate() error {
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL DEFAULT ''
 		)`,
+		`CREATE TABLE IF NOT EXISTS authors (
+			email TEXT PRIMARY KEY,
+			name TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
 		// Indexes for common queries
 		`CREATE INDEX IF NOT EXISTS idx_rfds_state ON rfds(state)`,
 		`CREATE INDEX IF NOT EXISTS idx_rfds_modified ON rfds(modified_at)`,

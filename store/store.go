@@ -16,6 +16,10 @@ type Store interface {
 	CreateTag(tag *models.Tag) error
 	UpdateTag(tag *models.Tag) error
 
+	GetAuthors() ([]models.Author, error)
+	GetAuthorByEmail(email string) (*models.Author, error)
+	CreateOrUpdateAuthor(author *models.Author) error
+
 	EnsureUpdateLatestRFDID() error
 	GetNextRFDID() (string, error)
 

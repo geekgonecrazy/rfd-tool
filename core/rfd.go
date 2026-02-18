@@ -34,8 +34,43 @@ func GetTags() ([]models.Tag, error) {
 	return tags, nil
 }
 
-func GetRFDsByAuthor(author string) ([]models.RFD, error) {
-	return _dataStore.GetRFDsByAuthor(author)
+func GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) {
+	return _dataStore.GetRFDsByAuthor(authorQuery)
+}
+
+func GetAuthors() ([]models.Author, error) {
+	return _dataStore.GetAuthors()
+}
+
+func GetAuthorByEmail(email string) (*models.Author, error) {
+	return _dataStore.GetAuthorByEmail(email)
+}
+
+// normalizeAndStoreAuthors parses author strings, stores in authors table,
+// and returns normalized author identifiers (emails when available)
+func normalizeAndStoreAuthors(authors []string) []string {
+	normalized := make([]string, 0, len(authors))
+	
+	for _, authorStr := range authors {
+		name, email := models.ParseAuthor(authorStr)
+		
+		if email != "" {
+			// Store/update author in database
+			author := &models.Author{
+				Email: email,
+				Name:  name,
+			}
+			_ = _dataStore.CreateOrUpdateAuthor(author)
+			
+			// Use email as the normalized identifier
+			normalized = append(normalized, email)
+		} else if name != "" {
+			// No email, keep the name as-is
+			normalized = append(normalized, name)
+		}
+	}
+	
+	return normalized
 }
 
 func GetRFDsByTag(tag string) ([]models.RFD, error) {
@@ -292,6 +327,10 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 	if rfd.ID != "" && !_validId.Match([]byte(rfd.ID)) {
 		return errors.New("invalid rfd id")
 	}
+
+	// Normalize authors and extract to authors table
+	normalizedAuthors := normalizeAndStoreAuthors(rfd.Authors)
+	rfd.Authors = normalizedAuthors
 
 	existingRFD, err := _dataStore.GetRFDByID(rfd.ID)
 	if err != nil {
