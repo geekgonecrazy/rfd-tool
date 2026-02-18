@@ -129,3 +129,37 @@ func (s *boltStore) EnsureUpdateLatestRFDID() error {
 
 	return nil
 }
+
+// UpdateNextRFDIDIfNeeded updates nextRFD if the given ID is >= current next ID
+func (s *boltStore) UpdateNextRFDIDIfNeeded(tx *bbolt.Tx, rfdID string) error {
+	bucket := tx.Bucket(metaBucket)
+
+	bytes := bucket.Get([]byte("nextRFD"))
+
+	var nextRFD int64 = 1
+	if bytes != nil {
+		if err := json.Unmarshal(bytes, &nextRFD); err != nil {
+			return err
+		}
+	}
+
+	id, err := strconv.ParseInt(rfdID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	// If imported ID is >= nextRFD, update nextRFD to be id+1
+	if id >= nextRFD {
+		newNext := id + 1
+		buf, err := json.Marshal(newNext)
+		if err != nil {
+			return err
+		}
+
+		if err := bucket.Put([]byte("nextRFD"), buf); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
