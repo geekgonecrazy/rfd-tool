@@ -477,18 +477,22 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 		if err != nil {
 			log.Printf("Failed to send create webhook for RFD %s: %v", rfd.ID, err)
 		} else if resp != nil && resp.Discussion != nil && resp.Discussion.URL != "" {
-			// Update the RFD with the discussion URL
-			log.Printf("Discussion created for RFD %s: %s", rfd.ID, resp.Discussion.URL)
-			rfd.Discussion = resp.Discussion.URL
-			if err := _dataStore.UpdateRFD(rfd); err != nil {
-				log.Printf("Failed to update RFD %s with discussion URL: %v", rfd.ID, err)
+			// Only update if the discussion URL is different
+			if rfd.Discussion != resp.Discussion.URL {
+				log.Printf("Discussion created for RFD %s: %s", rfd.ID, resp.Discussion.URL)
+				rfd.Discussion = resp.Discussion.URL
+				if err := _dataStore.UpdateRFD(rfd); err != nil {
+					log.Printf("Failed to update RFD %s with discussion URL: %v", rfd.ID, err)
+				} else {
+					// Commit the discussion link to git
+					go func(rfdID, discussionURL string) {
+						if err := UpdateRFDDiscussionInRepo(rfdID, discussionURL); err != nil {
+							log.Printf("Failed to commit discussion URL for RFD %s: %v", rfdID, err)
+						}
+					}(rfd.ID, resp.Discussion.URL)
+				}
 			} else {
-				// Commit the discussion link to git
-				go func(rfdID, discussionURL string) {
-					if err := UpdateRFDDiscussionInRepo(rfdID, discussionURL); err != nil {
-						log.Printf("Failed to commit discussion URL for RFD %s: %v", rfdID, err)
-					}
-				}(rfd.ID, resp.Discussion.URL)
+				log.Printf("Discussion link for RFD %s already set, skipping update", rfd.ID)
 			}
 		}
 	}
