@@ -55,6 +55,13 @@ oidc:
   authUrl: https://login.yourcompanyokta.com/oauth2/v1/authorize
   tokenUrl: https://login.yourcompanyokta.com/oauth2/v1/token
 apiSecret: super-secret-api-key
+
+# Webhook configuration (optional)
+# Sends events when RFDs are created or updated
+webhook:
+  url: https://your-webhook-endpoint.com/rfd-events
+  secret: your-preshared-webhook-secret  # Used to sign payloads with HMAC-SHA256
+
 jwt:
   publicKey: |
     #rsa publicKey
