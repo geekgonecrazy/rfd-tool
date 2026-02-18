@@ -23,6 +23,7 @@ repo:
     # Paste the private key here (indented)
 
 dataPath: ./data/
+store: sqlite  # sqlite or boltdb (default: sqlite)
 
 # Dex OIDC configuration (matches dev/dex-config.yaml)
 oidc:

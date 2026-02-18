@@ -30,6 +30,34 @@ func (s *boltStore) GetRFDs() ([]models.RFD, error) {
 	return rfds, nil
 }
 
+func (s *boltStore) GetRFDsByAuthor(author string) ([]models.RFD, error) {
+	tx, err := s.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	cursor := tx.Bucket(rfdBucket).Cursor()
+
+	rfds := make([]models.RFD, 0)
+	for k, data := cursor.First(); k != nil; k, data = cursor.Next() {
+		var rfd models.RFD
+		if err := json.Unmarshal(data, &rfd); err != nil {
+			return nil, err
+		}
+
+		// Check if author matches
+		for _, a := range rfd.Authors {
+			if a == author {
+				rfds = append(rfds, rfd)
+				break
+			}
+		}
+	}
+
+	return rfds, nil
+}
+
 func (s *boltStore) GetRFDByID(id string) (*models.RFD, error) {
 	tx, err := s.Begin(false)
 	if err != nil {

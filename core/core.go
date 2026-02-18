@@ -12,6 +12,7 @@ import (
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/store"
 	"github.com/geekgonecrazy/rfd-tool/store/boltstore"
+	"github.com/geekgonecrazy/rfd-tool/store/sqlitestore"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -36,13 +37,29 @@ var _gitCloneOptions *git.CloneOptions
 func Setup() error {
 	_validId, _ = regexp.Compile(`^\d{1,4}$`)
 
-	// Initialize datastore
-	store, err := boltstore.New()
+	// Initialize datastore based on config
+	var dataStore store.Store
+	var err error
+
+	storeType := config.Config.Store
+	if storeType == "" {
+		storeType = "sqlite" // default to sqlite
+	}
+
+	switch storeType {
+	case "sqlite":
+		dataStore, err = sqlitestore.New()
+	case "boltdb":
+		dataStore, err = boltstore.New()
+	default:
+		return fmt.Errorf("unknown store type: %s (valid options: sqlite, boltdb)", storeType)
+	}
+
 	if err != nil {
 		return err
 	}
 
-	_dataStore = store
+	_dataStore = dataStore
 
 	if err := _dataStore.EnsureUpdateLatestRFDID(); err != nil {
 		return err

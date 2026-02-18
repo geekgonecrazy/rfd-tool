@@ -19,6 +19,25 @@ func DefaultRouteHandler(c *gin.Context) {
 	c.Redirect(http.StatusTemporaryRedirect, "/login")
 }
 
+// AuthorListPageHandler filters RFDs by author
+func AuthorListPageHandler(c *gin.Context) {
+	author := c.Param("author")
+
+	if author == "" {
+		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
+	}
+
+	rfds, err := core.GetRFDsByAuthor(author)
+	if err != nil {
+		handleError(c, "getting rfds by author", err)
+		return
+	}
+
+	authorMap := getAuthorDisplayMap()
+	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds, "authorFilter": author, "authorMap": authorMap})
+}
+
 // TagListPageHandler Will tag the tag provided and filter RFDs down to matching
 func TagListPageHandler(c *gin.Context) {
 
@@ -35,7 +54,8 @@ func TagListPageHandler(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds, "tagFilter": tag})
+	authorMap := getAuthorDisplayMap()
+	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds, "tagFilter": tag, "authorMap": authorMap})
 }
 
 // DefaultRouteHandler
@@ -87,7 +107,25 @@ func RFDListPageHandler(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds})
+	authorMap := getAuthorDisplayMap()
+	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{"siteName": config.Config.Site.Name, "rfds": rfds, "authorMap": authorMap})
+}
+
+// getAuthorDisplayMap returns a map of email -> display name
+func getAuthorDisplayMap() map[string]string {
+	authorMap := make(map[string]string)
+	authors, err := core.GetAuthors()
+	if err != nil {
+		return authorMap
+	}
+	for _, a := range authors {
+		if a.Name != "" {
+			authorMap[a.Email] = a.Name
+		} else {
+			authorMap[a.Email] = a.Email
+		}
+	}
+	return authorMap
 }
 
 // RFDCreatePageHandler Returns UI for creating RFD
