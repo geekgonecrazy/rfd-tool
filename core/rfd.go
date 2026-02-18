@@ -251,6 +251,102 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 	return renderedRFD, nil
 }
 
+// UpdateRFDDiscussionInRepo updates the discussion field in the RFD's frontmatter and commits to git
+func UpdateRFDDiscussionInRepo(rfdNum string, discussionURL string) error {
+	storage := memory.NewStorage()
+	wt := memfs.New()
+
+	log.Printf("Cloning RFD Repo to update discussion link for RFD %s", rfdNum)
+	r, err := git.Clone(storage, wt, _gitCloneOptions)
+	if err != nil {
+		return fmt.Errorf("failed to clone repo: %w", err)
+	}
+
+	worktree, err := r.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Try to checkout the RFD's branch if it exists, otherwise use main
+	branchRef := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", rfdNum))
+	err = worktree.Checkout(&git.CheckoutOptions{Branch: branchRef})
+	if err != nil {
+		// Branch doesn't exist, stay on main branch
+		log.Printf("RFD %s branch not found, updating on main branch", rfdNum)
+	}
+
+	// Read the RFD file
+	rfdPath := fmt.Sprintf("%s/%s/README.md", config.Config.Repo.Folder, rfdNum)
+	f, err := wt.Open(rfdPath)
+	if err != nil {
+		return fmt.Errorf("failed to open RFD file: %w", err)
+	}
+
+	// Parse frontmatter
+	var rfdMeta models.RFDMeta
+	body, err := frontmatter.Parse(f, &rfdMeta)
+	f.Close()
+	if err != nil {
+		return fmt.Errorf("failed to parse frontmatter: %w", err)
+	}
+
+	// Update the discussion field
+	rfdMeta.Discussion = discussionURL
+
+	// Rebuild the file with updated frontmatter
+	rfdSeparator := []byte("---\n")
+	header, err := yaml.Marshal(rfdMeta)
+	if err != nil {
+		return fmt.Errorf("failed to marshal frontmatter: %w", err)
+	}
+
+	rfdFile := []byte{}
+	rfdFile = append(rfdFile, rfdSeparator...)
+	rfdFile = append(rfdFile, header...)
+	rfdFile = append(rfdFile, rfdSeparator...)
+	rfdFile = append(rfdFile, body...)
+
+	// Write the updated file
+	newFile, err := wt.Create(rfdPath)
+	if err != nil {
+		return fmt.Errorf("failed to create RFD file: %w", err)
+	}
+
+	_, err = newFile.Write(rfdFile)
+	newFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to write RFD file: %w", err)
+	}
+
+	// Stage the change
+	_, err = worktree.Add(rfdPath)
+	if err != nil {
+		return fmt.Errorf("failed to stage changes: %w", err)
+	}
+
+	// Commit
+	author := object.Signature{
+		Name:  config.Config.Repo.CommitAuthorName,
+		Email: config.Config.Repo.CommitAuthorEmail,
+		When:  time.Now(),
+	}
+
+	commitMsg := fmt.Sprintf("Add discussion link for RFD %s", rfdNum)
+	_, err = worktree.Commit(commitMsg, &git.CommitOptions{Author: &author})
+	if err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	// Push
+	log.Printf("Pushing discussion link update for RFD %s", rfdNum)
+	if err := r.Push(&git.PushOptions{RemoteName: "origin", Auth: _gitPublicKeys}); err != nil {
+		return fmt.Errorf("failed to push: %w", err)
+	}
+
+	log.Printf("Successfully updated discussion link for RFD %s in repo", rfdNum)
+	return nil
+}
+
 func GetRFDCodespaceLink(rfdNum string) (string, error) {
 	repo := config.Config.Repo.URL
 	folder := config.Config.Repo.Folder
@@ -375,10 +471,25 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 		return err
 	}
 
-	// Send webhook for new RFD
+	// Send webhook for new RFD and handle discussion URL response
 	if _webhookClient != nil {
-		if err := _webhookClient.SendCreated(rfd); err != nil {
+		resp, err := _webhookClient.SendCreated(rfd)
+		if err != nil {
 			log.Printf("Failed to send create webhook for RFD %s: %v", rfd.ID, err)
+		} else if resp != nil && resp.Discussion != nil && resp.Discussion.URL != "" {
+			// Update the RFD with the discussion URL
+			log.Printf("Discussion created for RFD %s: %s", rfd.ID, resp.Discussion.URL)
+			rfd.Discussion = resp.Discussion.URL
+			if err := _dataStore.UpdateRFD(rfd); err != nil {
+				log.Printf("Failed to update RFD %s with discussion URL: %v", rfd.ID, err)
+			} else {
+				// Commit the discussion link to git
+				go func(rfdID, discussionURL string) {
+					if err := UpdateRFDDiscussionInRepo(rfdID, discussionURL); err != nil {
+						log.Printf("Failed to commit discussion URL for RFD %s: %v", rfdID, err)
+					}
+				}(rfd.ID, resp.Discussion.URL)
+			}
 		}
 	}
 

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"reflect"
@@ -31,11 +32,24 @@ type Config struct {
 
 // Payload is the webhook payload sent to the configured URL
 type Payload struct {
-	Event     EventType    `json:"event"`
-	Timestamp time.Time    `json:"timestamp"`
-	RFD       *models.RFD  `json:"rfd"`
-	Link      string       `json:"link"`
-	Changes   *RFDChanges  `json:"changes,omitempty"`
+	Event     EventType   `json:"event"`
+	Timestamp time.Time   `json:"timestamp"`
+	RFD       *models.RFD `json:"rfd"`
+	Link      string      `json:"link"`
+	Changes   *RFDChanges `json:"changes,omitempty"`
+}
+
+// Response is the expected response from the webhook endpoint
+type Response struct {
+	Success    bool              `json:"success"`
+	Error      string            `json:"error,omitempty"`
+	Discussion *DiscussionInfo   `json:"discussion,omitempty"`
+}
+
+// DiscussionInfo contains information about the created discussion
+type DiscussionInfo struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
 }
 
 // RFDChanges tracks what changed in an update
@@ -80,10 +94,10 @@ func (c *Client) IsConfigured() bool {
 	return c != nil && c.config != nil && c.config.URL != ""
 }
 
-// SendCreated sends a webhook for a newly created RFD
-func (c *Client) SendCreated(rfd *models.RFD) error {
+// SendCreated sends a webhook for a newly created RFD and returns the discussion URL if provided
+func (c *Client) SendCreated(rfd *models.RFD) (*Response, error) {
 	if !c.IsConfigured() {
-		return nil
+		return nil, nil
 	}
 
 	payload := &Payload{
@@ -93,7 +107,8 @@ func (c *Client) SendCreated(rfd *models.RFD) error {
 		Link:      fmt.Sprintf("%s/rfd/%s", c.siteURL, rfd.ID),
 	}
 
-	return c.send(payload)
+	// For created events, we wait synchronously to get the discussion URL
+	return c.sendSync(payload)
 }
 
 // SendUpdated sends a webhook for an updated RFD if there are changes
@@ -116,7 +131,9 @@ func (c *Client) SendUpdated(old, new *models.RFD) error {
 		Changes:   changes,
 	}
 
-	return c.send(payload)
+	// Updates are sent async - we don't need to wait for response
+	c.sendAsync(payload)
+	return nil
 }
 
 // detectChanges compares old and new RFD and returns changes, or nil if no changes
@@ -169,16 +186,64 @@ func stringSliceEqual(a, b []string) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// send delivers the webhook payload
-func (c *Client) send(payload *Payload) error {
+// sendSync delivers the webhook payload and waits for the response
+func (c *Client) sendSync(payload *Payload) (*Response, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal webhook payload: %w", err)
+		return nil, fmt.Errorf("failed to marshal webhook payload: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", c.config.URL, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("failed to create webhook request: %w", err)
+		return nil, fmt.Errorf("failed to create webhook request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "RFD-Tool-Webhook/1.0")
+
+	// Add HMAC signature if secret is configured
+	if c.config.Secret != "" {
+		signature := computeHMAC(body, c.config.Secret)
+		req.Header.Set("X-RFD-Signature", "sha256="+signature)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("webhook delivery failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read webhook response: %w", err)
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("webhook returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var webhookResp Response
+	if err := json.Unmarshal(respBody, &webhookResp); err != nil {
+		// Response might not be JSON, that's okay
+		log.Printf("Webhook response was not JSON: %s", string(respBody))
+		return &Response{Success: true}, nil
+	}
+
+	return &webhookResp, nil
+}
+
+// sendAsync delivers the webhook payload without waiting for response
+func (c *Client) sendAsync(payload *Payload) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Failed to marshal webhook payload: %v", err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", c.config.URL, bytes.NewReader(body))
+	if err != nil {
+		log.Printf("Failed to create webhook request: %v", err)
+		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -203,8 +268,6 @@ func (c *Client) send(payload *Payload) error {
 			log.Printf("Webhook delivery returned status %d", resp.StatusCode)
 		}
 	}()
-
-	return nil
 }
 
 // computeHMAC creates an HMAC-SHA256 signature
