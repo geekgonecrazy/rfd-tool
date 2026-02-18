@@ -1,5 +1,18 @@
+# Config (contains secrets)
 config.yaml
+
+# Generated keys
+jwt_private.pem
+jwt_public.pem
+deploy_key
+deploy_key.pub
+
+# Build artifacts
 vendor
-store.bbolt
 rfd-server
 rfd-client
+
+# Data
+data/
+store.bbolt
+*.bbolt

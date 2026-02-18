@@ -1,0 +1,45 @@
+# Development configuration - works with local Dex OIDC provider
+# Copy to config.yaml and customize as needed
+
+site:
+  name: RFD Tool (Dev)
+  url: http://localhost:8877
+  logo.svg: |
+    <svg width="80px" height="80px" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="28" fill="#4a90d9"/>
+      <text x="32" y="40" font-size="24" text-anchor="middle" fill="white">RFD</text>
+    </svg>
+
+repo:
+  username: git
+  url: https://github.com/geekgonecrazy/rfd-example
+  folder: rfds
+  mainBranch: main
+  commitAuthorName: RFD-Tool
+  commitAuthorEmail: rfdtool@localhost
+  privateDeployKey: |
+    # Generate with: ssh-keygen -t rsa -b 4096 -f ~/.ssh/rfd_deploy_key -N ""
+    # Add the .pub key to your GitHub repo as a deploy key
+    # Paste the private key here (indented)
+
+dataPath: ./data/
+
+# Dex OIDC configuration (matches dev/dex-config.yaml)
+oidc:
+  clientId: rfd-tool-dev
+  clientSecret: rfd-tool-dev-secret
+  issuerUrl: http://localhost:5556/dex
+  authUrl: http://localhost:5556/dex/auth
+  tokenUrl: http://localhost:5556/dex/token
+
+apiSecret: dev-api-secret-change-in-production
+
+# Generate JWT keys with:
+#   openssl genrsa -out jwt_private.pem 2048
+#   openssl rsa -in jwt_private.pem -pubout -out jwt_public.pem
+jwt:
+  publicKey: |
+    # Paste contents of jwt_public.pem here (indented)
+
+  privateKey: |
+    # Paste contents of jwt_private.pem here (indented)
