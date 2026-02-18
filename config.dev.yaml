@@ -35,6 +35,12 @@ oidc:
 
 apiSecret: dev-api-secret-change-in-production
 
+# Webhook configuration (optional)
+# Sends HTTP POST to the URL when RFDs are created or updated
+# webhook:
+#   url: http://localhost:8080/webhook
+#   secret: dev-webhook-secret
+
 # Generate JWT keys with:
 #   openssl genrsa -out jwt_private.pem 2048
 #   openssl rsa -in jwt_private.pem -pubout -out jwt_public.pem

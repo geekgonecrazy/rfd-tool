@@ -263,8 +263,18 @@ func GetRFDCodespaceLink(rfdNum string) (string, error) {
 }
 
 func updateRFD(existing *models.RFD, updated *models.RFD) error {
+	// Make a copy of existing for webhook comparison
+	oldCopy := *existing
+
 	if err := _dataStore.UpdateRFD(updated); err != nil {
 		return err
+	}
+
+	// Send webhook for update (only if there are changes)
+	if _webhookClient != nil {
+		if err := _webhookClient.SendUpdated(&oldCopy, updated); err != nil {
+			log.Printf("Failed to send update webhook for RFD %s: %v", updated.ID, err)
+		}
 	}
 
 	for _, t := range existing.Tags {
@@ -363,6 +373,13 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 	// Use ImportRFD to allow arbitrary IDs (for bulk imports from existing repos)
 	if err := _dataStore.ImportRFD(rfd); err != nil {
 		return err
+	}
+
+	// Send webhook for new RFD
+	if _webhookClient != nil {
+		if err := _webhookClient.SendCreated(rfd); err != nil {
+			log.Printf("Failed to send create webhook for RFD %s: %v", rfd.ID, err)
+		}
 	}
 
 	for _, t := range rfd.Tags {

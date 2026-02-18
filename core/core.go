@@ -13,6 +13,7 @@ import (
 	"github.com/geekgonecrazy/rfd-tool/store"
 	"github.com/geekgonecrazy/rfd-tool/store/boltstore"
 	"github.com/geekgonecrazy/rfd-tool/store/sqlitestore"
+	"github.com/geekgonecrazy/rfd-tool/webhook"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -33,6 +34,8 @@ var _validId *regexp.Regexp
 
 var _gitPublicKeys *ssh.PublicKeys
 var _gitCloneOptions *git.CloneOptions
+
+var _webhookClient *webhook.Client
 
 func Setup() error {
 	_validId, _ = regexp.Compile(`^\d{1,4}$`)
@@ -126,6 +129,15 @@ func Setup() error {
 		SingleBranch:  true,
 		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", config.Config.Repo.MainBranch)),
 		Auth:          publicKeys,
+	}
+
+	// Initialize webhook client if configured
+	if config.Config.Webhook != nil {
+		webhookCfg := &webhook.Config{
+			URL:    config.Config.Webhook.URL,
+			Secret: config.Config.Webhook.Secret,
+		}
+		_webhookClient = webhook.NewClient(webhookCfg, config.Config.Site.URL)
 	}
 
 	return nil

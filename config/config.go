@@ -15,15 +15,21 @@ import (
 var Config *config
 
 type config struct {
-	Site              siteConfig   `yaml:"site" json:"site"`
-	DataPath          string       `yaml:"dataPath" json:"dataPath"`
-	Store             string       `yaml:"store" json:"store"` // "sqlite" or "boltdb" (default: sqlite)
-	APISecret         string       `yaml:"apiSecret" json:"apiSecret"`
-	OIDC              oidcConfig   `yaml:"oidc" json:"oidc"`
-	Github            githubConfig `yaml:"github" json:"github"`
-	Repo              repoConfig   `yaml:"repo" json:"repo"`
-	JWT               jwtConfig    `yaml:"jwt" json:"jwt"`
-	RocketChatWebhook string       `yaml:"rocketchatWebhook" json:"rocketchatWebhook"`
+	Site              siteConfig     `yaml:"site" json:"site"`
+	DataPath          string         `yaml:"dataPath" json:"dataPath"`
+	Store             string         `yaml:"store" json:"store"` // "sqlite" or "boltdb" (default: sqlite)
+	APISecret         string         `yaml:"apiSecret" json:"apiSecret"`
+	OIDC              oidcConfig     `yaml:"oidc" json:"oidc"`
+	Github            githubConfig   `yaml:"github" json:"github"`
+	Repo              repoConfig     `yaml:"repo" json:"repo"`
+	JWT               jwtConfig      `yaml:"jwt" json:"jwt"`
+	Webhook           *webhookConfig `yaml:"webhook" json:"webhook"`
+	RocketChatWebhook string         `yaml:"rocketchatWebhook" json:"rocketchatWebhook"` // Deprecated: use webhook instead
+}
+
+type webhookConfig struct {
+	URL    string `yaml:"url" json:"url"`
+	Secret string `yaml:"secret" json:"secret"`
 }
 
 type siteConfig struct {
