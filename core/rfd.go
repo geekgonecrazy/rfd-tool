@@ -270,45 +270,35 @@ func UpdateRFDDiscussionInRepo(rfdNum string, discussionURL string) error {
 
 	// Try to fetch and checkout the RFD's branch if it exists, otherwise use main
 	branchRef := plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", rfdNum))
-	remoteRef := plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", rfdNum))
 
 	// Fetch the specific branch
+	log.Printf("Fetching branch %s", rfdNum)
 	err = r.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
-		RefSpecs:   []gitconfig.RefSpec{gitconfig.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s", rfdNum, rfdNum))},
+		RefSpecs:   []gitconfig.RefSpec{gitconfig.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/heads/%s", rfdNum, rfdNum))},
 		Auth:       _gitPublicKeys,
 	})
+
+	branchExists := err == nil || err == git.NoErrAlreadyUpToDate
 	if err != nil && err != git.NoErrAlreadyUpToDate {
-		// Branch might not exist remotely, that's okay
-		log.Printf("Could not fetch branch %s: %v", rfdNum, err)
+		log.Printf("Could not fetch branch %s: %v (will use main)", rfdNum, err)
 	}
 
-	// Try to checkout the branch
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: branchRef,
-		Create: true,
-		Force:  true,
-	})
-	if err != nil {
-		// Try checking out from remote ref
+	if branchExists {
+		// Checkout the fetched branch
+		log.Printf("Checking out branch %s", rfdNum)
 		err = worktree.Checkout(&git.CheckoutOptions{
-			Branch: remoteRef,
-			Create: false,
+			Branch: branchRef,
 			Force:  true,
 		})
 		if err != nil {
-			// Branch doesn't exist, stay on main branch
-			log.Printf("RFD %s branch not found, updating on main branch", rfdNum)
-		} else {
-			// Create local branch from remote
-			err = worktree.Checkout(&git.CheckoutOptions{
-				Branch: branchRef,
-				Create: true,
-			})
-			if err != nil {
-				log.Printf("Failed to create local branch %s: %v", rfdNum, err)
-			}
+			log.Printf("Failed to checkout branch %s: %v (will use main)", rfdNum, err)
+			branchExists = false
 		}
+	}
+
+	if !branchExists {
+		log.Printf("RFD %s branch not found, updating on main branch", rfdNum)
 	}
 
 	// Read the RFD file
