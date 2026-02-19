@@ -105,7 +105,7 @@ func (c *Client) SendCreated(rfd *models.RFD) (*Response, error) {
 		Event:     EventRFDCreated,
 		Timestamp: time.Now().UTC(),
 		RFD:       rfd,
-		Link:      fmt.Sprintf("%s/rfd/%s", c.siteURL, rfd.ID),
+		Link:      fmt.Sprintf("%s/%s", c.siteURL, rfd.ID),
 	}
 
 	// For created events, we wait synchronously to get the discussion URL
@@ -129,7 +129,7 @@ func (c *Client) SendUpdated(old, new *models.RFD) (*Response, error) {
 		Event:     EventRFDUpdated,
 		Timestamp: time.Now().UTC(),
 		RFD:       new,
-		Link:      fmt.Sprintf("%s/rfd/%s", c.siteURL, new.ID),
+		Link:      fmt.Sprintf("%s/%s", c.siteURL, new.ID),
 		Changes:   changes,
 	}
 
