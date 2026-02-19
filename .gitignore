@@ -6,6 +6,8 @@ jwt_private.pem
 jwt_public.pem
 deploy_key
 deploy_key.pub
+source_deploy_key
+source_deploy_key.pub
 
 # Build artifacts
 vendor
