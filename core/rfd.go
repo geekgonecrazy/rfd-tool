@@ -393,8 +393,25 @@ func updateRFD(existing *models.RFD, updated *models.RFD) error {
 
 	// Send webhook for update (only if there are changes)
 	if _webhookClient != nil {
-		if err := _webhookClient.SendUpdated(&oldCopy, updated); err != nil {
+		resp, err := _webhookClient.SendUpdated(&oldCopy, updated)
+		if err != nil {
 			log.Printf("Failed to send update webhook for RFD %s: %v", updated.ID, err)
+		} else if resp != nil && resp.Discussion != nil && resp.Discussion.URL != "" {
+			// Discussion was created on update (RFD had no discussion before)
+			if updated.Discussion != resp.Discussion.URL {
+				log.Printf("Discussion created for RFD %s: %s", updated.ID, resp.Discussion.URL)
+				updated.Discussion = resp.Discussion.URL
+				if err := _dataStore.UpdateRFD(updated); err != nil {
+					log.Printf("Failed to update RFD %s with discussion URL: %v", updated.ID, err)
+				} else {
+					// Commit the discussion link to git
+					go func(rfdID, discussionURL string) {
+						if err := UpdateRFDDiscussionInRepo(rfdID, discussionURL); err != nil {
+							log.Printf("Failed to commit discussion URL for RFD %s: %v", rfdID, err)
+						}
+					}(updated.ID, resp.Discussion.URL)
+				}
+			}
 		}
 	}
 

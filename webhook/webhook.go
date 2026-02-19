@@ -113,15 +113,16 @@ func (c *Client) SendCreated(rfd *models.RFD) (*Response, error) {
 }
 
 // SendUpdated sends a webhook for an updated RFD if there are changes
-func (c *Client) SendUpdated(old, new *models.RFD) error {
+// Returns the response in case a discussion was created
+func (c *Client) SendUpdated(old, new *models.RFD) (*Response, error) {
 	if !c.IsConfigured() {
-		return nil
+		return nil, nil
 	}
 
 	changes := detectChanges(old, new)
 	if changes == nil {
 		// No changes, don't send webhook
-		return nil
+		return nil, nil
 	}
 
 	payload := &Payload{
@@ -132,9 +133,8 @@ func (c *Client) SendUpdated(old, new *models.RFD) error {
 		Changes:   changes,
 	}
 
-	// Updates are sent async - we don't need to wait for response
-	c.sendAsync(payload)
-	return nil
+	// Send sync to get response (may contain discussion URL if one was created)
+	return c.sendSync(payload)
 }
 
 // detectChanges compares old and new RFD and returns changes, or nil if no changes
