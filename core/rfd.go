@@ -7,6 +7,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/adrg/frontmatter"
@@ -21,6 +22,21 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"gopkg.in/yaml.v2"
 )
+
+// Per-RFD locks to prevent concurrent discussion link updates
+var (
+	rfdLocks   = make(map[string]*sync.Mutex)
+	rfdLocksMu sync.Mutex
+)
+
+func getRFDLock(rfdNum string) *sync.Mutex {
+	rfdLocksMu.Lock()
+	defer rfdLocksMu.Unlock()
+	if rfdLocks[rfdNum] == nil {
+		rfdLocks[rfdNum] = &sync.Mutex{}
+	}
+	return rfdLocks[rfdNum]
+}
 
 func GetRFDs() ([]models.RFD, error) {
 	return _dataStore.GetRFDs()
@@ -491,6 +507,11 @@ func CreateOrUpdateRFD(rfd *models.RFD, skipDiscussion bool) error {
 	if rfd.ID != "" && !_validId.Match([]byte(rfd.ID)) {
 		return errors.New("invalid rfd id")
 	}
+
+	// Lock per-RFD to prevent concurrent updates from racing
+	lock := getRFDLock(rfd.ID)
+	lock.Lock()
+	defer lock.Unlock()
 
 	// Normalize authors and extract to authors table
 	normalizedAuthors := normalizeAndStoreAuthors(rfd.Authors)
