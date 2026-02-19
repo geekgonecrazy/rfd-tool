@@ -22,6 +22,7 @@ import (
 var validRFDNumber *regexp.Regexp
 var server string
 var token string
+var skipDiscussion bool
 
 func main() {
 	rfdNum := flag.String("rfd", "", "If passed will operate on single rfd")
@@ -30,7 +31,10 @@ func main() {
 	folder := flag.String("folder", "", "rfd folder")
 	repoPath := flag.String("repo", ".", "path to git repo (for branch import)")
 	rfdFolder := flag.String("rfd-folder", "adr", "folder containing ADRs within repo")
+	skipDisc := flag.Bool("skip-discussion", false, "skip creating discussions (for bulk imports)")
 	flag.Parse()
+
+	skipDiscussion = *skipDisc
 
 	r, _ := regexp.Compile(`^\d{4}`)
 
@@ -106,7 +110,11 @@ func sendRFD(rfd *models.RFD) error {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v1/rfds/%s", server, rfd.ID), buf)
+	url := fmt.Sprintf("%s/api/v1/rfds/%s", server, rfd.ID)
+	if skipDiscussion {
+		url += "?skip_discussion=true"
+	}
+	req, err := http.NewRequest("POST", url, buf)
 	if err != nil {
 		fmt.Println(err)
 		return err
