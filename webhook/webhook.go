@@ -32,11 +32,12 @@ type Config struct {
 
 // Payload is the webhook payload sent to the configured URL
 type Payload struct {
-	Event     EventType   `json:"event"`
-	Timestamp time.Time   `json:"timestamp"`
-	RFD       *models.RFD `json:"rfd"`
-	Link      string      `json:"link"`
-	Changes   *RFDChanges `json:"changes,omitempty"`
+	Event          EventType   `json:"event"`
+	Timestamp      time.Time   `json:"timestamp"`
+	RFD            *models.RFD `json:"rfd"`
+	Link           string      `json:"link"`
+	Changes        *RFDChanges `json:"changes,omitempty"`
+	SkipDiscussion bool        `json:"skip_discussion,omitempty"`
 }
 
 // Response is the expected response from the webhook endpoint

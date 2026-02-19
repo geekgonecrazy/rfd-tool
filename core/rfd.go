@@ -240,7 +240,7 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 		return nil, err
 	}
 
-	if err := CreateOrUpdateRFD(renderedRFD); err != nil {
+	if err := CreateOrUpdateRFD(renderedRFD, false); err != nil {
 		return nil, err
 	}
 
@@ -471,7 +471,7 @@ func updateRFD(existing *models.RFD, updated *models.RFD) error {
 	return nil
 }
 
-func CreateOrUpdateRFD(rfd *models.RFD) error {
+func CreateOrUpdateRFD(rfd *models.RFD, skipDiscussion bool) error {
 	if rfd.ID != "" && !_validId.Match([]byte(rfd.ID)) {
 		return errors.New("invalid rfd id")
 	}
@@ -498,7 +498,8 @@ func CreateOrUpdateRFD(rfd *models.RFD) error {
 	}
 
 	// Send webhook for new RFD and handle discussion URL response
-	if _webhookClient != nil {
+	// Skip if skipDiscussion is true (bulk import mode)
+	if _webhookClient != nil && !skipDiscussion {
 		resp, err := _webhookClient.SendCreated(rfd)
 		if err != nil {
 			log.Printf("Failed to send create webhook for RFD %s: %v", rfd.ID, err)

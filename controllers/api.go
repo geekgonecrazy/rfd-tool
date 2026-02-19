@@ -69,6 +69,7 @@ func CreateRFDHandler(c *gin.Context) {
 }
 
 // CreateOrUpdateRFDHandler create rfd
+// Use ?skip_discussion=true to skip creating a discussion (useful for bulk imports)
 func CreateOrUpdateRFDHandler(c *gin.Context) {
 	var rfd models.RFD
 	if err := c.BindJSON(&rfd); err != nil {
@@ -78,7 +79,9 @@ func CreateOrUpdateRFDHandler(c *gin.Context) {
 
 	log.Println(rfd)
 
-	if err := core.CreateOrUpdateRFD(&rfd); err != nil {
+	skipDiscussion := c.Query("skip_discussion") == "true"
+
+	if err := core.CreateOrUpdateRFD(&rfd, skipDiscussion); err != nil {
 		handleErrorJSON(c, "creating rfd", err)
 		return
 	}
