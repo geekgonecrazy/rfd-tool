@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"regexp"
@@ -132,12 +133,15 @@ func Setup() error {
 	}
 
 	// Initialize webhook client if configured
-	if config.Config.Webhook != nil {
+	if config.Config.Webhook != nil && config.Config.Webhook.URL != "" {
 		webhookCfg := &webhook.Config{
 			URL:    config.Config.Webhook.URL,
 			Secret: config.Config.Webhook.Secret,
 		}
 		_webhookClient = webhook.NewClient(webhookCfg, config.Config.Site.URL)
+		log.Printf("Webhook client configured for %s", config.Config.Webhook.URL)
+	} else {
+		log.Println("Webhook client not configured")
 	}
 
 	return nil
