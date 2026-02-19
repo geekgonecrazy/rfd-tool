@@ -115,7 +115,6 @@ func GetRFDsByTag(tag string) ([]models.RFD, error) {
 
 func GetRFDByID(id string) (*models.RFD, error) {
 	if id != "" && !_validId.Match([]byte(id)) {
-		log.Println("invalid?")
 		return nil, nil
 	}
 
