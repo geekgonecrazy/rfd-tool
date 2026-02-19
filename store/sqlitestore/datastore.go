@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/geekgonecrazy/rfd-tool/config"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type sqliteStore struct {
