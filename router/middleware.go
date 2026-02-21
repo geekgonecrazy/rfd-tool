@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/core"
@@ -57,12 +58,19 @@ func requireSession(c *gin.Context) {
 	loggedIn := c.GetBool("loggedIn")
 
 	if !loggedIn {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
 		if c.Request.URL.Path != "/" {
 			c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/login?resume_url=%s", c.Request.URL.Path))
+			c.Abort()
 			return
 		}
 
 		c.Redirect(http.StatusTemporaryRedirect, "/login")
+		c.Abort()
 		return
 	}
 
