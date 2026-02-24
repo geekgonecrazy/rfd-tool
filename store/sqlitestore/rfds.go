@@ -10,7 +10,7 @@ import (
 )
 
 func (s *sqliteStore) GetRFDs() ([]models.RFD, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.readPool.Query(`
 		SELECT id, title, authors, state, discussion, tags, content, content_md, created_at, modified_at
 		FROM rfds
 		ORDER BY id ASC
@@ -34,7 +34,7 @@ func (s *sqliteStore) GetRFDs() ([]models.RFD, error) {
 
 func (s *sqliteStore) GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) {
 	// Search for author in the JSON array (matches email or name)
-	rows, err := s.db.Query(`
+	rows, err := s.readPool.Query(`
 		SELECT id, title, authors, state, discussion, tags, content, content_md, created_at, modified_at
 		FROM rfds
 		WHERE authors LIKE ?
@@ -64,7 +64,7 @@ func (s *sqliteStore) GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) 
 }
 
 func (s *sqliteStore) GetRFDByID(id string) (*models.RFD, error) {
-	row := s.db.QueryRow(`
+	row := s.readPool.QueryRow(`
 		SELECT id, title, authors, state, discussion, tags, content, content_md, created_at, modified_at
 		FROM rfds
 		WHERE id = ?
@@ -120,7 +120,7 @@ func (s *sqliteStore) insertRFD(rfd *models.RFD) error {
 		return err
 	}
 
-	_, err = s.db.Exec(`
+	_, err = s.writePool.Exec(`
 		INSERT INTO rfds (id, title, authors, state, discussion, tags, content, content_md, created_at, modified_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, rfd.ID, rfd.Title, string(authorsJSON), string(rfd.State), rfd.Discussion, string(tagsJSON), rfd.Content, rfd.ContentMD, rfd.CreatedAt, rfd.ModifiedAt)
@@ -141,7 +141,7 @@ func (s *sqliteStore) UpdateRFD(rfd *models.RFD) error {
 		return err
 	}
 
-	_, err = s.db.Exec(`
+	_, err = s.writePool.Exec(`
 		UPDATE rfds
 		SET title = ?, authors = ?, state = ?, discussion = ?, tags = ?, content = ?, content_md = ?, modified_at = ?
 		WHERE id = ?

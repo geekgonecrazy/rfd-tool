@@ -9,7 +9,7 @@ import (
 )
 
 func (s *sqliteStore) GetTags() ([]models.Tag, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.readPool.Query(`
 		SELECT name, rfds, created_at, modified_at
 		FROM tags
 		ORDER BY name ASC
@@ -32,7 +32,7 @@ func (s *sqliteStore) GetTags() ([]models.Tag, error) {
 }
 
 func (s *sqliteStore) GetTag(name string) (*models.Tag, error) {
-	row := s.db.QueryRow(`
+	row := s.readPool.QueryRow(`
 		SELECT name, rfds, created_at, modified_at
 		FROM tags
 		WHERE name = ?
@@ -59,7 +59,7 @@ func (s *sqliteStore) CreateTag(tag *models.Tag) error {
 		return err
 	}
 
-	_, err = s.db.Exec(`
+	_, err = s.writePool.Exec(`
 		INSERT INTO tags (name, rfds, created_at, modified_at)
 		VALUES (?, ?, ?, ?)
 	`, tag.Name, string(rfdsJSON), tag.CreatedAt, tag.ModifiedAt)
@@ -75,7 +75,7 @@ func (s *sqliteStore) UpdateTag(tag *models.Tag) error {
 		return err
 	}
 
-	_, err = s.db.Exec(`
+	_, err = s.writePool.Exec(`
 		UPDATE tags
 		SET rfds = ?, modified_at = ?
 		WHERE name = ?

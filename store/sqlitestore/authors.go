@@ -8,7 +8,7 @@ import (
 )
 
 func (s *sqliteStore) GetAuthors() ([]models.Author, error) {
-	rows, err := s.db.Query(`
+	rows, err := s.readPool.Query(`
 		SELECT email, name, created_at, modified_at
 		FROM authors
 		ORDER BY name ASC
@@ -32,7 +32,7 @@ func (s *sqliteStore) GetAuthors() ([]models.Author, error) {
 
 func (s *sqliteStore) GetAuthorByEmail(email string) (*models.Author, error) {
 	var a models.Author
-	err := s.db.QueryRow(`
+	err := s.readPool.QueryRow(`
 		SELECT email, name, created_at, modified_at
 		FROM authors
 		WHERE email = ?
@@ -51,7 +51,7 @@ func (s *sqliteStore) GetAuthorByEmail(email string) (*models.Author, error) {
 func (s *sqliteStore) CreateOrUpdateAuthor(author *models.Author) error {
 	now := time.Now()
 	
-	_, err := s.db.Exec(`
+	_, err := s.writePool.Exec(`
 		INSERT INTO authors (email, name, created_at, modified_at)
 		VALUES (?, ?, ?, ?)
 		ON CONFLICT(email) DO UPDATE SET
