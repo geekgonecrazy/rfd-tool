@@ -2,6 +2,7 @@ package sqlitestore
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -11,8 +12,13 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// sqliteStore uses separate read and write connection pools to take advantage
+// of SQLite's WAL mode, which allows concurrent reads while a write is in
+// progress.  The write pool is limited to a single connection because SQLite
+// only supports one writer at a time.
 type sqliteStore struct {
-	db *sql.DB
+	writePool *sql.DB
+	readPool  *sql.DB
 }
 
 // scanner interface for sql.Row and sql.Rows
@@ -28,21 +34,10 @@ func New() (*sqliteStore, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
+	store, err := openDB(dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, err
 	}
-
-	// Enable foreign keys and WAL mode for better performance
-	_, err = db.Exec(`
-		PRAGMA foreign_keys = ON;
-		PRAGMA journal_mode = WAL;
-	`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to set pragmas: %w", err)
-	}
-
-	store := &sqliteStore{db: db}
 
 	if err := store.migrate(); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
@@ -50,6 +45,27 @@ func New() (*sqliteStore, error) {
 
 	log.Println("SQLite store initialized at", dbPath)
 	return store, nil
+}
+
+// openDB opens separate read and write pools for the given database path.
+func openDB(dbPath string) (*sqliteStore, error) {
+	pragmas := "_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+
+	// Write pool – single connection, read-write-create mode, immediate txlock
+	writePool, err := sql.Open("sqlite", dbPath+"?"+pragmas+"&_txlock=immediate")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open write pool: %w", err)
+	}
+	writePool.SetMaxOpenConns(1) // SQLite supports only one concurrent writer
+
+	// Read pool – multiple connections, read-only mode
+	readPool, err := sql.Open("sqlite", dbPath+"?"+pragmas+"&mode=ro")
+	if err != nil {
+		writePool.Close()
+		return nil, fmt.Errorf("failed to open read pool: %w", err)
+	}
+
+	return &sqliteStore{writePool: writePool, readPool: readPool}, nil
 }
 
 func (s *sqliteStore) migrate() error {
@@ -88,7 +104,7 @@ func (s *sqliteStore) migrate() error {
 	}
 
 	for _, migration := range migrations {
-		if _, err := s.db.Exec(migration); err != nil {
+		if _, err := s.writePool.Exec(migration); err != nil {
 			return fmt.Errorf("migration failed: %w", err)
 		}
 	}
@@ -97,9 +113,19 @@ func (s *sqliteStore) migrate() error {
 }
 
 func (s *sqliteStore) CheckDb() error {
-	return s.db.Ping()
+	return s.readPool.Ping()
 }
 
 func (s *sqliteStore) Close() error {
-	return s.db.Close()
+	var errR, errW error
+	if s.readPool != nil {
+		errR = s.readPool.Close()
+	}
+	if s.writePool != nil {
+		errW = s.writePool.Close()
+	}
+	if errR != nil || errW != nil {
+		return errors.Join(errR, errW)
+	}
+	return nil
 }

@@ -9,7 +9,7 @@ import (
 
 func (s *sqliteStore) GetNextRFDID() (string, error) {
 	var value string
-	err := s.db.QueryRow(`SELECT value FROM meta WHERE key = 'nextRFD'`).Scan(&value)
+	err := s.readPool.QueryRow(`SELECT value FROM meta WHERE key = 'nextRFD'`).Scan(&value)
 	if err == sql.ErrNoRows {
 		// Initialize to 0001 if not set
 		return "0001", nil
@@ -27,7 +27,7 @@ func (s *sqliteStore) GetNextRFDID() (string, error) {
 }
 
 func (s *sqliteStore) setNextRFDID(id int64) error {
-	_, err := s.db.Exec(`
+	_, err := s.writePool.Exec(`
 		INSERT INTO meta (key, value) VALUES ('nextRFD', ?)
 		ON CONFLICT(key) DO UPDATE SET value = ?
 	`, fmt.Sprintf("%d", id), fmt.Sprintf("%d", id))
@@ -62,7 +62,7 @@ func (s *sqliteStore) updateNextRFDIDIfNeeded(rfdID string) error {
 func (s *sqliteStore) EnsureUpdateLatestRFDID() error {
 	// Find the highest RFD ID in the database
 	var maxID sql.NullString
-	err := s.db.QueryRow(`SELECT MAX(CAST(id AS INTEGER)) FROM rfds`).Scan(&maxID)
+	err := s.readPool.QueryRow(`SELECT MAX(CAST(id AS INTEGER)) FROM rfds`).Scan(&maxID)
 	if err != nil {
 		return err
 	}
