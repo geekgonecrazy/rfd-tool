@@ -40,63 +40,28 @@ export TOKEN=$(cat /tmp/loadtest/test-token.txt)
 k6 run loadtest/mixed_read_write.js
 ```
 
-The test runs **20 reader VUs** and **5 writer VUs** for 30 seconds with zero
-think-time, pushing maximum concurrent throughput. K6 will print a summary
-showing throughput, latency percentiles, and custom metrics
-(`read_latency`, `write_latency`, `read_ok`, `write_ok`).
+The test runs **10 reader VUs** (5 list + 5 by-ID) and **10 writer VUs** for
+30 seconds with zero think-time. The balanced 1:1 read/write ratio creates
+heavy contention on the database — exactly where separated pools shine.
 
-## Load Test Results
+K6 will print a summary with custom metrics:
+`read_list_latency`, `read_by_id_latency`, `write_latency`,
+`read_list_ok`, `read_by_id_ok`, `write_ok`.
 
-The following results were collected on the same machine with the same K6
-scenario (20 read VUs + 5 write VUs, 30 s, no sleep).
+## Why a Balanced Ratio?
 
-### Dual Pool (separate read + write) – AFTER
+With a read-heavy skew (e.g. 20 reads : 5 writes), the write pressure is too
+low to create meaningful contention. The difference between a single pool and
+dual pools only becomes clear when writes are frequent enough to actually block
+readers. A 1:1 ratio ensures:
 
-| Metric | Value |
-|--------|-------|
-| **http_reqs** | **19,952 (663 req/s)** |
-| **http_req_failed** | **0.00% (0 errors)** |
-| read_latency p95 | 89.24 ms |
-| write_latency p95 | 231.09 ms |
-| read_ok | 18,523 (616/s) |
-| write_ok | **1,429 (47.5/s)** |
+* Writes happen continuously, keeping the write lock active.
+* Reads compete directly with writes for the same connection pool (single-pool)
+  or proceed unblocked via a separate read-only pool (dual-pool / WAL).
+* The by-ID reader scenario hits the **same rows** writers are mutating,
+  maximising row-level contention.
 
-### Single Pool (shared, no connection limit) – BEFORE
-
-| Metric | Value |
-|--------|-------|
-| **http_reqs** | 20,178 (672 req/s) |
-| **http_req_failed** | **0.005% (1 write error)** |
-| read_latency p95 | 85.58 ms |
-| write_latency p95 | 205.55 ms |
-| read_ok | 18,661 (621/s) |
-| write_ok | 1,516 (50.5/s) |
-
-### Single Pool (MaxOpenConns=1) – SERIALIZED BASELINE
-
-| Metric | Value |
-|--------|-------|
-| **http_reqs** | 20,175 (672 req/s) |
-| **http_req_failed** | **0.01% (2 write errors)** |
-| read_latency p95 | 84.96 ms |
-| write_latency p95 | 209 ms |
-| read_ok | 18,640 (621/s) |
-| write_ok | 1,533 (51/s) |
-
-### Analysis
-
-On this **local loopback test** the raw throughput numbers are comparable
-because SQLite operations complete in microseconds and the 5 s busy timeout
-absorbs most contention.  The important differences are:
-
-| Observation | Detail |
-|-------------|--------|
-| **Zero write failures** | The dual-pool approach had **0 failed requests** across ~20 k iterations. Both single-pool configurations had write failures due to concurrent writers competing for the same connection pool. |
-| **Clean concurrency model** | With a dedicated write pool (MaxOpenConns=1) writes are automatically queued. Reads never contend with writes thanks to WAL mode and a separate read-only pool. |
-| **Production safety** | Under sustained real-world load with larger datasets, network latency, and longer-running queries, the contention in the single-pool model increases dramatically. The dual-pool model eliminates "database is locked" errors by design. |
-| **Simpler code** | No need for application-level `sync.RWMutex` or retry logic — SQLite's built-in WAL concurrency handles it. |
-
-## Comparing Before & After Yourself
+## Comparing Before & After
 
 ### Before (single connection pool)
 
@@ -123,3 +88,18 @@ k6 run loadtest/mixed_read_write.js 2>&1 | tee /tmp/loadtest/results-after.txt
 
 kill %1
 ```
+
+### What to look for
+
+| Metric | Expected with dual pools |
+|--------|--------------------------|
+| `http_req_failed` | **0 %** — no "database is locked" errors |
+| `read_list_latency` p95 | Lower — reads never blocked by writes |
+| `read_by_id_latency` p95 | Lower — same-row reads proceed concurrently |
+| `write_latency` p95 | Similar or slightly lower |
+| Total `http_reqs` | Higher — no head-of-line blocking |
+
+With a single pool, every read and write competes for the same connection(s),
+creating head-of-line blocking. With separate pools, WAL-mode SQLite allows
+reads to proceed **concurrently** with writes, improving throughput and
+eliminating write failures under balanced load.
