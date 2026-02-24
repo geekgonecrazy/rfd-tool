@@ -2,6 +2,7 @@ package sqlitestore
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -124,7 +125,7 @@ func (s *sqliteStore) Close() error {
 		errW = s.writePool.Close()
 	}
 	if errR != nil || errW != nil {
-		return fmt.Errorf("closing DB pools: read: %w; write: %w", errR, errW)
+		return errors.Join(errR, errW)
 	}
 	return nil
 }
