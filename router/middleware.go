@@ -12,20 +12,10 @@ import (
 )
 
 func getSessionFromCookieOrHeader(c *gin.Context) {
-	tokenString, err := c.Cookie("_sess")
-	if err != nil {
-		c.Next()
-		return
-	}
+	tokenString, _ := c.Cookie("_sess")
 
 	if tokenString == "" {
 		tokenString = c.GetHeader("Authorization")
-		if err != nil {
-			log.Println(err)
-
-			c.Next()
-			return
-		}
 	}
 
 	if tokenString == "" {

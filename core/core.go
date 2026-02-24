@@ -87,12 +87,13 @@ func Setup() error {
 		},
 	}
 
-	provider, err := oidc.NewProvider(context.TODO(), config.Config.OIDC.IssuerURL)
-	if err != nil {
-		return err
+	if config.Config.OIDC.IssuerURL != "" {
+		provider, err := oidc.NewProvider(context.TODO(), config.Config.OIDC.IssuerURL)
+		if err != nil {
+			return err
+		}
+		_oidcVerifier = provider.Verifier(&oidc.Config{ClientID: config.Config.OIDC.ClientID})
 	}
-
-	_oidcVerifier = provider.Verifier(&oidc.Config{ClientID: config.Config.OIDC.ClientID})
 
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(config.Config.JWT.PrivateKey))
 	if err != nil {
@@ -108,27 +109,29 @@ func Setup() error {
 
 	_jwtPublicKey = publicKey
 
-	publicKeys, err := ssh.NewPublicKeys(config.Config.Repo.Username, []byte(config.Config.Repo.PrivateDeployKey), "")
-	if err != nil {
-		return err
-	}
+	if config.Config.Repo.PrivateDeployKey != "" {
+		publicKeys, err := ssh.NewPublicKeys(config.Config.Repo.Username, []byte(config.Config.Repo.PrivateDeployKey), "")
+		if err != nil {
+			return err
+		}
 
-	// Setup the git stuff
-	_gitPublicKeys = publicKeys
+		// Setup the git stuff
+		_gitPublicKeys = publicKeys
 
-	u, err := url.Parse(config.Config.Repo.URL)
-	if err != nil {
-		return err
-	}
+		u, err := url.Parse(config.Config.Repo.URL)
+		if err != nil {
+			return err
+		}
 
-	sshGithubURL := fmt.Sprintf("%s:%s.git", u.Host, u.Path)
+		sshGithubURL := fmt.Sprintf("%s:%s.git", u.Host, u.Path)
 
-	_gitCloneOptions = &git.CloneOptions{
-		URL:           sshGithubURL,
-		Progress:      os.Stdout,
-		SingleBranch:  true,
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", config.Config.Repo.MainBranch)),
-		Auth:          publicKeys,
+		_gitCloneOptions = &git.CloneOptions{
+			URL:           sshGithubURL,
+			Progress:      os.Stdout,
+			SingleBranch:  true,
+			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", config.Config.Repo.MainBranch)),
+			Auth:          publicKeys,
+		}
 	}
 
 	// Initialize webhook client if configured
