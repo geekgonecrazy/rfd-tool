@@ -3,6 +3,7 @@ package controllers
 import (
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/core"
@@ -224,7 +225,10 @@ func getAuthorMaps(isPublicView bool) (map[string]string, map[string]string) {
 			authorMap[a.Email] = a.Name
 			// Also map by name so RFDs with name-only authors can be resolved
 			authorMap[a.Name] = a.Name
-			authorIDMap[a.Name] = a.ID
+			// Only set authorIDMap[a.Name] if not already set, or if this author has an email (prefer email-based authors)
+			if _, exists := authorIDMap[a.Name]; !exists || strings.Contains(a.Email, "@") {
+				authorIDMap[a.Name] = a.ID
+			}
 		} else if isPublicView {
 			// For public view, don't show email if no name
 			authorMap[a.Email] = "Unknown"

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/geekgonecrazy/rfd-tool/models"
@@ -57,13 +58,42 @@ func (s *sqliteStore) GetPublicRFDs() ([]models.RFD, error) {
 }
 
 func (s *sqliteStore) GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) {
-	// Search for author in the JSON array (matches email or name)
+	// First, try to find RFDs with the exact author query
+	rfds, err := s.searchRFDsByAuthorString(authorQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we found results, return them
+	if len(rfds) > 0 {
+		return rfds, nil
+	}
+
+	// If no direct match, try to find the author record and search by their other identity
+	author, err := s.findAuthorByIdentity(authorQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	if author != nil {
+		// Try searching by the other format (name vs email)
+		if authorQuery == author.Name && author.Email != author.Name {
+			return s.searchRFDsByAuthorString(author.Email)
+		} else if authorQuery == author.Email && author.Name != "" {
+			return s.searchRFDsByAuthorString(author.Name)
+		}
+	}
+
+	return []models.RFD{}, nil
+}
+
+func (s *sqliteStore) searchRFDsByAuthorString(authorString string) ([]models.RFD, error) {
 	rows, err := s.db.Query(`
 		SELECT id, title, authors, state, discussion, tags, public, content, content_md, created_at, modified_at
 		FROM rfds
 		WHERE authors LIKE ?
 		ORDER BY id ASC
-	`, "%"+authorQuery+"%")
+	`, "%"+authorString+"%")
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +107,7 @@ func (s *sqliteStore) GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) 
 		}
 		// Double-check exact author match (LIKE can match partial)
 		for _, a := range rfd.Authors {
-			if a == authorQuery {
+			if a == authorString {
 				rfds = append(rfds, *rfd)
 				break
 			}
@@ -85,6 +115,28 @@ func (s *sqliteStore) GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) 
 	}
 
 	return rfds, rows.Err()
+}
+
+func (s *sqliteStore) findAuthorByIdentity(query string) (*models.Author, error) {
+	var author models.Author
+
+	// Try looking up by email first
+	if strings.Contains(query, "@") {
+		err := s.db.QueryRow("SELECT id, name, email FROM authors WHERE email = ?", query).
+			Scan(&author.ID, &author.Name, &author.Email)
+		if err == nil {
+			return &author, nil
+		}
+	}
+
+	// Try looking up by name
+	err := s.db.QueryRow("SELECT id, name, email FROM authors WHERE name = ?", query).
+		Scan(&author.ID, &author.Name, &author.Email)
+	if err == nil {
+		return &author, nil
+	}
+
+	return nil, nil // Not found
 }
 
 func (s *sqliteStore) GetRFDByID(id string) (*models.RFD, error) {

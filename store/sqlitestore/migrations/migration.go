@@ -43,6 +43,8 @@ func (m *MigrationManager) registerMigrations() {
 		Migration002AddPublicColumn(),
 		Migration003AddAuthorIDs(),
 		Migration004DeduplicateAuthors(),
+		Migration005RemoveDuplicateAuthors(),
+		Migration006FixAuthorConsolidation(),
 	}
 
 	// Sort migrations by version to ensure correct order
