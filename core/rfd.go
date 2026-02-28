@@ -42,6 +42,46 @@ func GetRFDs() ([]models.RFD, error) {
 	return _dataStore.GetRFDs()
 }
 
+func GetPublicRFDs() ([]models.RFD, error) {
+	return _dataStore.GetPublicRFDs()
+}
+
+func GetPublicRFDByID(id string) (*models.RFD, error) {
+	if id != "" && !_validId.Match([]byte(id)) {
+		return nil, nil
+	}
+
+	if len(id) < 4 {
+		id = fmt.Sprintf("%04s", id)
+	}
+
+	return _dataStore.GetPublicRFDByID(id)
+}
+
+func IsRFDPublic(id string) (bool, error) {
+	if id != "" && !_validId.Match([]byte(id)) {
+		return false, nil
+	}
+
+	if len(id) < 4 {
+		id = fmt.Sprintf("%04s", id)
+	}
+
+	return _dataStore.IsRFDPublic(id)
+}
+
+func GetPublicRFDsByTag(tag string) ([]models.RFD, error) {
+	return _dataStore.GetPublicRFDsByTag(tag)
+}
+
+func GetPublicRFDsByAuthorID(authorID string) ([]models.RFD, error) {
+	return _dataStore.GetPublicRFDsByAuthorID(authorID)
+}
+
+func GetAuthorByID(id string) (*models.Author, error) {
+	return _dataStore.GetAuthorByID(id)
+}
+
 func GetTags() ([]models.Tag, error) {
 	tags, err := _dataStore.GetTags()
 	if err != nil {
@@ -67,7 +107,7 @@ func GetAuthorByEmail(email string) (*models.Author, error) {
 func normalizeTags(tags []string) []string {
 	seen := make(map[string]bool)
 	normalized := make([]string, 0, len(tags))
-	
+
 	for _, tag := range tags {
 		n := models.NormalizeTag(tag)
 		if n != "" && !seen[n] {
@@ -75,7 +115,7 @@ func normalizeTags(tags []string) []string {
 			normalized = append(normalized, n)
 		}
 	}
-	
+
 	return normalized
 }
 
@@ -83,10 +123,10 @@ func normalizeTags(tags []string) []string {
 // and returns normalized author identifiers (emails when available)
 func normalizeAndStoreAuthors(authors []string) []string {
 	normalized := make([]string, 0, len(authors))
-	
+
 	for _, authorStr := range authors {
 		name, email := models.ParseAuthor(authorStr)
-		
+
 		if email != "" {
 			// Store/update author in database
 			author := &models.Author{
@@ -94,7 +134,7 @@ func normalizeAndStoreAuthors(authors []string) []string {
 				Name:  name,
 			}
 			_ = _dataStore.CreateOrUpdateAuthor(author)
-			
+
 			// Use email as the normalized identifier
 			normalized = append(normalized, email)
 		} else if name != "" {
@@ -102,7 +142,7 @@ func normalizeAndStoreAuthors(authors []string) []string {
 			normalized = append(normalized, name)
 		}
 	}
-	
+
 	return normalized
 }
 

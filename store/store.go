@@ -11,6 +11,13 @@ type Store interface {
 	UpdateRFD(sponsorship *models.RFD) error
 	ImportRFD(rfd *models.RFD) error
 
+	// Public RFD methods
+	GetPublicRFDs() ([]models.RFD, error)
+	GetPublicRFDByID(id string) (*models.RFD, error)
+	GetPublicRFDsByTag(tag string) ([]models.RFD, error)
+	GetPublicRFDsByAuthorID(authorID string) ([]models.RFD, error)
+	IsRFDPublic(id string) (bool, error)
+
 	GetTags() ([]models.Tag, error)
 	GetTag(tag string) (*models.Tag, error)
 	CreateTag(tag *models.Tag) error
@@ -18,6 +25,7 @@ type Store interface {
 
 	GetAuthors() ([]models.Author, error)
 	GetAuthorByEmail(email string) (*models.Author, error)
+	GetAuthorByID(id string) (*models.Author, error)
 	CreateOrUpdateAuthor(author *models.Author) error
 
 	EnsureUpdateLatestRFDID() error

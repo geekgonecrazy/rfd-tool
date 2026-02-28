@@ -36,17 +36,23 @@ func Run() error {
 	}
 
 	// Server Side Rendered Pages
-	router.GET("/tag/:tag", requireSession, controllers.TagListPageHandler)
-	router.GET("/author/:author", requireSession, controllers.AuthorListPageHandler)
-	router.GET("/:id", requireSession, controllers.RFDPageHandler)
+	// Public-aware pages: show public RFDs when not logged in, all RFDs when logged in
+	router.GET("/tag/:tag", optionalPublicOrSession, controllers.TagListPageHandler)
+	router.GET("/author/:id", optionalPublicOrSession, controllers.AuthorListPageHandler)
 
+	// RFD detail page: public RFDs accessible without login
+	router.GET("/:id", requirePublicOrSession, controllers.RFDPageHandler)
+
+	// These always require login
 	router.GET("/create", requireSession, controllers.RFDCreatePageHandler)
 	router.GET("/created", requireSession, controllers.RFDCreatedPageHandler)
 	router.POST("/created", requireSession, controllers.RFDCreatedPageHandler)
 
 	router.GET("/login", controllers.LoginPageHandler)
+	router.GET("/logout", controllers.LogoutHandler)
 
-	router.GET("/", controllers.DefaultRouteHandler)
+	// Home page: shows public RFDs when not logged in
+	router.GET("/", optionalPublicOrSession, controllers.DefaultRouteHandler)
 	router.NoRoute(controllers.DefaultRouteHandler)
 
 	if err := router.Run(":8877"); err != nil {

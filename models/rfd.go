@@ -19,6 +19,7 @@ type RFDMeta struct {
 	State      RFDState `json:"state" yaml:"state"`
 	Discussion string   `json:"discussion" yaml:"discussion"`
 	Tags       []string `json:"tags" yaml:"tags"`
+	Public     bool     `json:"public" yaml:"public"`
 }
 
 type RFDState string

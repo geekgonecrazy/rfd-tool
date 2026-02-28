@@ -93,7 +93,79 @@ func (s *sqliteStore) migrate() error {
 		}
 	}
 
+	// Run column additions separately (these are idempotent via checking)
+	if err := s.addColumnIfNotExists("rfds", "public", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return fmt.Errorf("failed to add public column: %w", err)
+	}
+
+	if err := s.addColumnIfNotExists("authors", "id", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add id column to authors: %w", err)
+	}
+
+	// Backfill author IDs for existing rows
+	if err := s.backfillAuthorIDs(); err != nil {
+		return fmt.Errorf("failed to backfill author IDs: %w", err)
+	}
+
+	// Additional indexes
+	additionalIndexes := []string{
+		`CREATE INDEX IF NOT EXISTS idx_rfds_public ON rfds(public)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_authors_id ON authors(id)`,
+	}
+
+	for _, idx := range additionalIndexes {
+		if _, err := s.db.Exec(idx); err != nil {
+			return fmt.Errorf("index creation failed: %w", err)
+		}
+	}
+
 	return nil
+}
+
+// addColumnIfNotExists adds a column to a table if it doesn't already exist
+func (s *sqliteStore) addColumnIfNotExists(table, column, colType string) error {
+	// Check if column exists
+	rows, err := s.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	columnExists := false
+	for rows.Next() {
+		var cid int
+		var name, coltype string
+		var notnull, pk int
+		var dfltValue interface{}
+		if err := rows.Scan(&cid, &name, &coltype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			columnExists = true
+			break
+		}
+	}
+
+	if !columnExists {
+		_, err := s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, colType))
+		if err != nil {
+			return err
+		}
+		log.Printf("Added column %s to table %s", column, table)
+	}
+
+	return nil
+}
+
+// backfillAuthorIDs generates UUIDs for authors that don't have an ID
+func (s *sqliteStore) backfillAuthorIDs() error {
+	// Update any authors with NULL or empty ID
+	_, err := s.db.Exec(`
+		UPDATE authors 
+		SET id = lower(hex(randomblob(16))) 
+		WHERE id IS NULL OR id = ''
+	`)
+	return err
 }
 
 func (s *sqliteStore) CheckDb() error {

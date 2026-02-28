@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{if .isPublicView}}
+    <meta name="robots" content="noindex, nofollow">
+    {{end}}
     <title>{{.rfd.Title}} | {{.siteName}}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,14 +15,26 @@
 <body>
     <div class="rfd">
         <header class="rfd-detail-header">
-            <div class="logo">
-                <a href="/"><img src="/assets/logo.svg"></a>
+            <div class="header-top">
+                <div class="logo">
+                    <a href="/"><img src="/assets/logo.svg"></a>
+                </div>
+                <div class="header-auth">
+                    {{if .isLoggedIn}}
+                        <a href="/logout" class="auth-button logout-button">Sign Out</a>
+                    {{else}}
+                        <a href="/login?resume_url=/{{.rfd.ID}}" class="auth-button login-button">Sign In</a>
+                    {{end}}
+                </div>
             </div>
 
             <div class="detail-header-content">
                 <div class="detail-title-wrapper">
                     <span class="detail-id">#{{ .rfd.ID }}</span>
                     <h1 class="detail-title">{{ .rfd.Title }}</h1>
+                    {{if .rfd.Public}}
+                    <span class="public-badge">public</span>
+                    {{end}}
                 </div>
 
                 <div class="detail-meta-info">
@@ -27,10 +42,17 @@
                         <span class="state-badge state-{{ .rfd.State }}">{{ .rfd.State }}</span>
                         <div class="authors-list">
                             {{ range $i, $author := .rfd.Authors }}
-                            <div class="author-item" title="{{$author}}">
+                            {{if index $.authorIDMap $author}}
+                            <a href="/author/{{index $.authorIDMap $author}}" class="author-item" title="{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}">
                                 <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                                <span>{{$author}}</span>
-                            </div>
+                                <span>{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}</span>
+                            </a>
+                            {{else}}
+                            <span class="author-item" title="{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}">
+                                <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                                <span>{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}</span>
+                            </span>
+                            {{end}}
                             {{end}}
                         </div>
                     </div>
@@ -43,7 +65,7 @@
                         </div>
                         {{end}}
                     </div>
-                     {{if .rfd.Discussion}}
+                    {{if and .rfd.Discussion .isLoggedIn}}
                     <div class="detail-meta-row">
                        <div class="discussion-link">
                            <a href="{{.rfd.Discussion}}" target="_blank" rel="noopener noreferrer">
