@@ -225,6 +225,17 @@ func (s *sqliteStore) ImportRFD(rfd *models.RFD) error {
 }
 
 func (s *sqliteStore) insertRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return fmt.Errorf("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return fmt.Errorf("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return fmt.Errorf("RFD must have at least one author")
+	}
+
 	now := time.Now()
 	rfd.CreatedAt = now
 	rfd.ModifiedAt = now
@@ -253,6 +264,17 @@ func (s *sqliteStore) insertRFD(rfd *models.RFD) error {
 }
 
 func (s *sqliteStore) UpdateRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return fmt.Errorf("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return fmt.Errorf("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return fmt.Errorf("RFD must have at least one author")
+	}
+
 	rfd.ModifiedAt = time.Now()
 
 	authorsJSON, err := json.Marshal(rfd.Authors)

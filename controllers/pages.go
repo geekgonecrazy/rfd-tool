@@ -143,11 +143,11 @@ func LoginPageHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "login.tmpl", gin.H{"siteName": config.Config.Site.Name, "resumeUrl": resumeURL})
 }
 
-// LogoutHandler clears the session cookie and redirects to home
+// LogoutHandler clears the session cookie and redirects to login page
 func LogoutHandler(c *gin.Context) {
 	// Clear the session cookie
 	c.SetCookie("_sess", "", -1, "/", "", false, true)
-	c.Redirect(http.StatusTemporaryRedirect, "/")
+	c.Redirect(http.StatusTemporaryRedirect, "/login")
 }
 
 // RFDPageHandler gets a single RFD by id
@@ -222,6 +222,9 @@ func getAuthorMaps(isPublicView bool) (map[string]string, map[string]string) {
 		// Set the display name
 		if a.Name != "" {
 			authorMap[a.Email] = a.Name
+			// Also map by name so RFDs with name-only authors can be resolved
+			authorMap[a.Name] = a.Name
+			authorIDMap[a.Name] = a.ID
 		} else if isPublicView {
 			// For public view, don't show email if no name
 			authorMap[a.Email] = "Unknown"

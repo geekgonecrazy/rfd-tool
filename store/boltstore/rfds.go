@@ -79,6 +79,17 @@ func (s *boltStore) GetRFDByID(id string) (*models.RFD, error) {
 }
 
 func (s *boltStore) CreateRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return errors.New("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return errors.New("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return errors.New("RFD must have at least one author")
+	}
+
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err
@@ -116,6 +127,17 @@ func (s *boltStore) CreateRFD(rfd *models.RFD) error {
 }
 
 func (s *boltStore) UpdateRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return errors.New("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return errors.New("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return errors.New("RFD must have at least one author")
+	}
+
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err
@@ -140,6 +162,17 @@ func (s *boltStore) UpdateRFD(rfd *models.RFD) error {
 
 // ImportRFD imports an RFD with an arbitrary ID (for bulk imports from existing repos)
 func (s *boltStore) ImportRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return errors.New("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return errors.New("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return errors.New("RFD must have at least one author")
+	}
+
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err

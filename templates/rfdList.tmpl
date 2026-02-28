@@ -24,7 +24,7 @@
                     {{if .isLoggedIn}}
                         <a href="/logout" class="auth-button logout-button">Sign Out</a>
                     {{else}}
-                        <a href="/login" class="auth-button login-button">Sign In</a>
+                        <a href="/oidc/login" class="auth-button login-button">Sign In</a>
                     {{end}}
                 </div>
             </div>
@@ -38,7 +38,7 @@
             </div>
             {{if .isPublicView}}
             <div class="public-notice">
-                Viewing public RFDs only. <a href="/login">Sign in</a> to see all.
+                Viewing public RFDs only. <a href="/oidc/login">Sign in</a> to see all.
             </div>
             {{end}}
             {{if .tagFilter}}
@@ -54,6 +54,14 @@
             <div class="rfd-card">
                 <div class="rfd-card-main">
                     <div class="rfd-card-header">
+                        {{if $.isLoggedIn}}
+                        <span class="public-indicator{{if not $rfd.Public}} public-indicator-hidden{{end}}" title="Publicly accessible">
+                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </span>
+                        {{end}}
                         <span class="rfd-id">#{{ $rfd.ID }}</span>
                         <h2 class="rfd-card-title">
                             <a href="/{{ $rfd.ID }}" title="{{ $rfd.Title }}">{{ $rfd.Title }}</a>
@@ -64,17 +72,10 @@
                         <!-- Authors from template -->
                         <div class="authors-list">
                              {{ range $i, $author := $rfd.Authors }}
-                                {{if index $.authorIDMap $author}}
                                 <a href="/author/{{index $.authorIDMap $author}}" class="author-item" title="{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}">
                                     <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
                                     <span>{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}</span>
                                 </a>
-                                {{else}}
-                                <span class="author-item" title="{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}">
-                                    <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                                    <span>{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}</span>
-                                </span>
-                                {{end}}
                              {{end}}
                         </div>
                         <!-- Tags from template -->
@@ -88,9 +89,6 @@
                 </div>
                 <div class="rfd-card-status">
                     <span class="state-badge state-{{ $rfd.State }}">{{ $rfd.State }}</span>
-                    {{if $rfd.Public}}
-                    <span class="public-badge">public</span>
-                    {{end}}
                 </div>
             </div>
             {{end}}
