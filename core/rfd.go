@@ -42,6 +42,46 @@ func GetRFDs() ([]models.RFD, error) {
 	return _dataStore.GetRFDs()
 }
 
+func GetPublicRFDs() ([]models.RFD, error) {
+	return _dataStore.GetPublicRFDs()
+}
+
+func GetPublicRFDByID(id string) (*models.RFD, error) {
+	if id != "" && !_validId.Match([]byte(id)) {
+		return nil, nil
+	}
+
+	if len(id) < 4 {
+		id = fmt.Sprintf("%04s", id)
+	}
+
+	return _dataStore.GetPublicRFDByID(id)
+}
+
+func IsRFDPublic(id string) (bool, error) {
+	if id != "" && !_validId.Match([]byte(id)) {
+		return false, nil
+	}
+
+	if len(id) < 4 {
+		id = fmt.Sprintf("%04s", id)
+	}
+
+	return _dataStore.IsRFDPublic(id)
+}
+
+func GetPublicRFDsByTag(tag string) ([]models.RFD, error) {
+	return _dataStore.GetPublicRFDsByTag(tag)
+}
+
+func GetPublicRFDsByAuthorID(authorID string) ([]models.RFD, error) {
+	return _dataStore.GetPublicRFDsByAuthorID(authorID)
+}
+
+func GetAuthorByID(id string) (*models.Author, error) {
+	return _dataStore.GetAuthorByID(id)
+}
+
 func GetTags() ([]models.Tag, error) {
 	tags, err := _dataStore.GetTags()
 	if err != nil {
@@ -67,7 +107,7 @@ func GetAuthorByEmail(email string) (*models.Author, error) {
 func normalizeTags(tags []string) []string {
 	seen := make(map[string]bool)
 	normalized := make([]string, 0, len(tags))
-	
+
 	for _, tag := range tags {
 		n := models.NormalizeTag(tag)
 		if n != "" && !seen[n] {
@@ -75,7 +115,7 @@ func normalizeTags(tags []string) []string {
 			normalized = append(normalized, n)
 		}
 	}
-	
+
 	return normalized
 }
 
@@ -83,27 +123,144 @@ func normalizeTags(tags []string) []string {
 // and returns normalized author identifiers (emails when available)
 func normalizeAndStoreAuthors(authors []string) []string {
 	normalized := make([]string, 0, len(authors))
-	
+
 	for _, authorStr := range authors {
-		name, email := models.ParseAuthor(authorStr)
-		
-		if email != "" {
-			// Store/update author in database
+		// Handle comma-separated authors within single entries
+		splitAuthors := strings.Split(authorStr, ",")
+
+		for _, singleAuthor := range splitAuthors {
+			singleAuthor = strings.TrimSpace(singleAuthor)
+			if singleAuthor == "" {
+				continue
+			}
+
+			name, email := models.ParseAuthor(singleAuthor)
+			canonicalIdentifier := findOrCreateCanonicalAuthor(name, email)
+
+			if canonicalIdentifier != "" {
+				normalized = append(normalized, canonicalIdentifier)
+			}
+		}
+	}
+
+	return normalized
+}
+
+// findOrCreateCanonicalAuthor finds existing related authors or creates new ones
+// Returns the canonical identifier (email if available, name otherwise)
+func findOrCreateCanonicalAuthor(name, email string) string {
+	// Case 1: We have both name and email - this is the best case
+	if email != "" && name != "" {
+		// Check if this exact author already exists
+		if existingAuthor, err := _dataStore.GetAuthorByEmail(email); err == nil && existingAuthor != nil {
+			// Update the name if it's better (not empty and current is empty)
+			if existingAuthor.Name == "" && name != "" {
+				existingAuthor.Name = name
+				_ = _dataStore.CreateOrUpdateAuthor(existingAuthor)
+			}
+			return email
+		}
+
+		// Check if we have a name-only version of this author that we can link
+		if relatedAuthor := findAuthorByNameOrEmail(name); relatedAuthor != nil {
+			// We found a related author - don't create duplicate, just ensure this email version exists
+			// Create the email-based version as the canonical one
 			author := &models.Author{
 				Email: email,
 				Name:  name,
 			}
 			_ = _dataStore.CreateOrUpdateAuthor(author)
-			
-			// Use email as the normalized identifier
-			normalized = append(normalized, email)
-		} else if name != "" {
-			// No email, keep the name as-is
-			normalized = append(normalized, name)
+			return email
+		}
+
+		// Create new email-based author
+		author := &models.Author{
+			Email: email,
+			Name:  name,
+		}
+		_ = _dataStore.CreateOrUpdateAuthor(author)
+		return email
+	}
+
+	// Case 2: We have only email
+	if email != "" {
+		// Check if this email already exists
+		if existingAuthor, err := _dataStore.GetAuthorByEmail(email); err == nil && existingAuthor != nil {
+			return email
+		}
+
+		// Create new email-only author
+		author := &models.Author{
+			Email: email,
+			Name:  "", // Will be updated if we later get name info
+		}
+		_ = _dataStore.CreateOrUpdateAuthor(author)
+		return email
+	}
+
+	// Case 3: We have only name
+	if name != "" {
+		// Check if we already have an email-based version of this author
+		if relatedAuthor := findAuthorByNameOrEmail(name); relatedAuthor != nil {
+			// Always prefer email-based identifier if one exists
+			if relatedAuthor.Email != relatedAuthor.Name {
+				// This is an email-based author, use email
+				return relatedAuthor.Email
+			} else {
+				// This is a name-only author, use name
+				return relatedAuthor.Name
+			}
+		}
+
+		// Create new name-only author
+		author := &models.Author{
+			Email: name, // Store name as email for name-only authors
+			Name:  name,
+		}
+		_ = _dataStore.CreateOrUpdateAuthor(author)
+		return name
+	}
+
+	return ""
+}
+
+// findAuthorByNameOrEmail looks for existing related authors
+// This handles cases like finding "Aaron Ogle" when we have "aaron.ogle@rocket.chat"
+func findAuthorByNameOrEmail(searchTerm string) *models.Author {
+	// First try exact email match
+	if author, err := _dataStore.GetAuthorByEmail(searchTerm); err == nil && author != nil {
+		return author
+	}
+
+	// Get all authors and search for related ones
+	authors, err := _dataStore.GetAuthors()
+	if err != nil {
+		return nil
+	}
+
+	searchLower := strings.ToLower(strings.TrimSpace(searchTerm))
+
+	for _, author := range authors {
+		// Exact name match
+		if strings.ToLower(author.Name) == searchLower {
+			return &author
+		}
+
+		// Check if email local part matches the name
+		if strings.Contains(author.Email, "@") {
+			emailParts := strings.Split(author.Email, "@")
+			if len(emailParts) == 2 {
+				localPart := strings.ToLower(emailParts[0])
+				// Handle formats like "aaron.ogle" matching "Aaron Ogle"
+				normalizedSearch := strings.ReplaceAll(searchLower, " ", ".")
+				if localPart == normalizedSearch {
+					return &author
+				}
+			}
 		}
 	}
-	
-	return normalized
+
+	return nil
 }
 
 func GetRFDsByTag(tag string) ([]models.RFD, error) {

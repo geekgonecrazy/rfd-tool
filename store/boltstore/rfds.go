@@ -79,6 +79,17 @@ func (s *boltStore) GetRFDByID(id string) (*models.RFD, error) {
 }
 
 func (s *boltStore) CreateRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return errors.New("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return errors.New("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return errors.New("RFD must have at least one author")
+	}
+
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err
@@ -116,6 +127,17 @@ func (s *boltStore) CreateRFD(rfd *models.RFD) error {
 }
 
 func (s *boltStore) UpdateRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return errors.New("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return errors.New("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return errors.New("RFD must have at least one author")
+	}
+
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err
@@ -140,6 +162,17 @@ func (s *boltStore) UpdateRFD(rfd *models.RFD) error {
 
 // ImportRFD imports an RFD with an arbitrary ID (for bulk imports from existing repos)
 func (s *boltStore) ImportRFD(rfd *models.RFD) error {
+	// Validate RFD data
+	if rfd.ID == "" {
+		return errors.New("RFD ID cannot be empty")
+	}
+	if rfd.Title == "" {
+		return errors.New("RFD title cannot be empty")
+	}
+	if len(rfd.Authors) == 0 {
+		return errors.New("RFD must have at least one author")
+	}
+
 	tx, err := s.Begin(true)
 	if err != nil {
 		return err
@@ -166,4 +199,118 @@ func (s *boltStore) ImportRFD(rfd *models.RFD) error {
 	}
 
 	return tx.Commit()
+}
+
+// GetPublicRFDs returns only public RFDs
+func (s *boltStore) GetPublicRFDs() ([]models.RFD, error) {
+	tx, err := s.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	cursor := tx.Bucket(rfdBucket).Cursor()
+
+	rfds := make([]models.RFD, 0)
+	for k, data := cursor.First(); k != nil; k, data = cursor.Next() {
+		var rfd models.RFD
+		if err := json.Unmarshal(data, &rfd); err != nil {
+			return nil, err
+		}
+		if rfd.Public {
+			rfds = append(rfds, rfd)
+		}
+	}
+
+	return rfds, nil
+}
+
+// GetPublicRFDByID returns an RFD only if it's public
+func (s *boltStore) GetPublicRFDByID(id string) (*models.RFD, error) {
+	rfd, err := s.GetRFDByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if rfd == nil || !rfd.Public {
+		return nil, nil
+	}
+	return rfd, nil
+}
+
+// IsRFDPublic checks if an RFD is public
+func (s *boltStore) IsRFDPublic(id string) (bool, error) {
+	rfd, err := s.GetRFDByID(id)
+	if err != nil {
+		return false, err
+	}
+	if rfd == nil {
+		return false, nil
+	}
+	return rfd.Public, nil
+}
+
+// GetPublicRFDsByTag returns public RFDs matching a tag
+func (s *boltStore) GetPublicRFDsByTag(tag string) ([]models.RFD, error) {
+	t, err := s.GetTag(tag)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil {
+		return []models.RFD{}, nil
+	}
+
+	rfds := []models.RFD{}
+	for _, rfdID := range t.RFDs {
+		rfd, err := s.GetPublicRFDByID(rfdID)
+		if err != nil {
+			return nil, err
+		}
+		if rfd != nil {
+			rfds = append(rfds, *rfd)
+		}
+	}
+
+	return rfds, nil
+}
+
+// GetPublicRFDsByAuthorID returns public RFDs by author ID
+func (s *boltStore) GetPublicRFDsByAuthorID(authorID string) ([]models.RFD, error) {
+	// First look up the author to get their email
+	author, err := s.GetAuthorByID(authorID)
+	if err != nil {
+		return nil, err
+	}
+	if author == nil {
+		return []models.RFD{}, nil
+	}
+
+	tx, err := s.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	cursor := tx.Bucket(rfdBucket).Cursor()
+
+	rfds := make([]models.RFD, 0)
+	for k, data := cursor.First(); k != nil; k, data = cursor.Next() {
+		var rfd models.RFD
+		if err := json.Unmarshal(data, &rfd); err != nil {
+			return nil, err
+		}
+
+		if !rfd.Public {
+			continue
+		}
+
+		// Check if author matches
+		for _, a := range rfd.Authors {
+			if a == author.Email {
+				rfds = append(rfds, rfd)
+				break
+			}
+		}
+	}
+
+	return rfds, nil
 }

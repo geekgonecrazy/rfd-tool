@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{if .isPublicView}}
+    <meta name="robots" content="noindex, nofollow">
+    {{end}}
     <title>{{.rfd.Title}} | {{.siteName}}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,14 +15,31 @@
 <body>
     <div class="rfd">
         <header class="rfd-detail-header">
-            <div class="logo">
-                <a href="/"><img src="/assets/logo.svg"></a>
+            <div class="header-top">
+                <div class="logo">
+                    <a href="/"><img src="/assets/logo.svg"></a>
+                </div>
+                <div class="header-auth">
+                    {{if .isLoggedIn}}
+                        <a href="/logout" class="auth-button logout-button">Sign Out</a>
+                    {{else}}
+                        <a href="/oidc/login?resume_url=/{{.rfd.ID}}" class="auth-button login-button">Sign In</a>
+                    {{end}}
+                </div>
             </div>
 
             <div class="detail-header-content">
                 <div class="detail-title-wrapper">
                     <span class="detail-id">#{{ .rfd.ID }}</span>
                     <h1 class="detail-title">{{ .rfd.Title }}</h1>
+                    {{if and .isLoggedIn .rfd.Public}}
+                    <span class="public-indicator" title="Publicly accessible">
+                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    {{end}}
                 </div>
 
                 <div class="detail-meta-info">
@@ -27,10 +47,10 @@
                         <span class="state-badge state-{{ .rfd.State }}">{{ .rfd.State }}</span>
                         <div class="authors-list">
                             {{ range $i, $author := .rfd.Authors }}
-                            <div class="author-item" title="{{$author}}">
+                            <a href="/author/{{index $.authorIDMap $author}}" class="author-item" title="{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}">
                                 <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                                <span>{{$author}}</span>
-                            </div>
+                                <span>{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}</span>
+                            </a>
                             {{end}}
                         </div>
                     </div>
@@ -43,7 +63,7 @@
                         </div>
                         {{end}}
                     </div>
-                     {{if .rfd.Discussion}}
+                    {{if and .rfd.Discussion .isLoggedIn}}
                     <div class="detail-meta-row">
                        <div class="discussion-link">
                            <a href="{{.rfd.Discussion}}" target="_blank" rel="noopener noreferrer">

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/geekgonecrazy/rfd-tool/config"
+	"github.com/geekgonecrazy/rfd-tool/store/sqlitestore/migrations"
 	_ "modernc.org/sqlite"
 )
 
@@ -53,47 +54,9 @@ func New() (*sqliteStore, error) {
 }
 
 func (s *sqliteStore) migrate() error {
-	migrations := []string{
-		`CREATE TABLE IF NOT EXISTS rfds (
-			id TEXT PRIMARY KEY,
-			title TEXT NOT NULL DEFAULT '',
-			authors TEXT NOT NULL DEFAULT '[]',
-			state TEXT NOT NULL DEFAULT '',
-			discussion TEXT NOT NULL DEFAULT '',
-			tags TEXT NOT NULL DEFAULT '[]',
-			content TEXT NOT NULL DEFAULT '',
-			content_md TEXT NOT NULL DEFAULT '',
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS tags (
-			name TEXT PRIMARY KEY,
-			rfds TEXT NOT NULL DEFAULT '[]',
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		`CREATE TABLE IF NOT EXISTS meta (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL DEFAULT ''
-		)`,
-		`CREATE TABLE IF NOT EXISTS authors (
-			email TEXT PRIMARY KEY,
-			name TEXT NOT NULL DEFAULT '',
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)`,
-		// Indexes for common queries
-		`CREATE INDEX IF NOT EXISTS idx_rfds_state ON rfds(state)`,
-		`CREATE INDEX IF NOT EXISTS idx_rfds_modified ON rfds(modified_at)`,
-	}
-
-	for _, migration := range migrations {
-		if _, err := s.db.Exec(migration); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
-		}
-	}
-
-	return nil
+	// Use the new migration system
+	migrationManager := migrations.NewMigrationManager(s.db)
+	return migrationManager.RunMigrations()
 }
 
 func (s *sqliteStore) CheckDb() error {
