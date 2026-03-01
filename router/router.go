@@ -23,16 +23,20 @@ func Run() error {
 
 	api := router.Group("/api/v1")
 	{
-		// Create/Update RFD by its ID happens from rfd-client currently
-		api.POST("/rfds/:id", requireAPISecret, controllers.CreateOrUpdateRFDHandler)
+		// ALL API endpoints use API token authentication
+		api.Use(requireAPISecret)
 
-		api.Use(requireSession)
+		api.POST("/rfds/:id", controllers.CreateOrUpdateRFDHandler)
 		api.GET("/rfds", controllers.GetRFDsHandler)
 		api.POST("/rfds", controllers.CreateRFDHandler)
 		api.GET("/rfds/:id", controllers.GetRFDHandler)
 
 		api.GET("/tags", controllers.GetTagsHandler)
 		api.GET("/tags/:tag/rfds", controllers.GetRFDsForTagHandler)
+
+		api.GET("/authors", controllers.GetAuthorsHandler)
+		api.GET("/authors/:id", controllers.GetAuthorHandler)
+		api.GET("/authors/:id/rfds", controllers.GetAuthorRFDsHandler)
 	}
 
 	// Server Side Rendered Pages

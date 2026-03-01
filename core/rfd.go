@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,8 +48,8 @@ func GetPublicRFDs() ([]models.RFD, error) {
 }
 
 func GetPublicRFDByID(id string) (*models.RFD, error) {
-	if id != "" && !_validId.Match([]byte(id)) {
-		return nil, nil
+	if id == "" {
+		return nil, errors.New("no id provided")
 	}
 
 	if len(id) < 4 {
@@ -75,7 +76,32 @@ func GetPublicRFDsByTag(tag string) ([]models.RFD, error) {
 }
 
 func GetPublicRFDsByAuthorID(authorID string) ([]models.RFD, error) {
-	return _dataStore.GetPublicRFDsByAuthorID(authorID)
+	// Get RFD IDs for this author
+	rfdIDs, err := _dataStore.GetRFDIDsByAuthor(authorID)
+	if err != nil {
+		return nil, err
+	}
+
+	var publicRFDs []models.RFD
+	for _, rfdID := range rfdIDs {
+		// Check if RFD is public
+		isPublic, err := _dataStore.IsRFDPublic(rfdID)
+		if err != nil {
+			continue
+		}
+		if !isPublic {
+			continue
+		}
+
+		rfd, err := _dataStore.GetRFDByID(rfdID)
+		if err != nil {
+			continue
+		}
+
+		publicRFDs = append(publicRFDs, *rfd)
+	}
+
+	return publicRFDs, nil
 }
 
 func GetAuthorByID(id string) (*models.Author, error) {
@@ -91,8 +117,30 @@ func GetTags() ([]models.Tag, error) {
 	return tags, nil
 }
 
-func GetRFDsByAuthor(authorQuery string) ([]models.RFD, error) {
-	return _dataStore.GetRFDsByAuthor(authorQuery)
+func GetRFDsByAuthor(authorID string) ([]models.RFD, error) {
+	// Validate that authorID is provided
+	if authorID == "" {
+		return nil, errors.New("author ID is required")
+	}
+
+	// Get RFD IDs for this author directly by ID
+	rfdIDs, err := _dataStore.GetRFDIDsByAuthor(authorID)
+	if err != nil {
+		return nil, err
+	}
+
+	var rfds []models.RFD
+	for _, rfdID := range rfdIDs {
+		rfd, err := _dataStore.GetRFDByID(rfdID)
+		if err != nil {
+			log.Printf("Error getting RFD %s: %v", rfdID, err)
+			continue
+		}
+
+		rfds = append(rfds, *rfd)
+	}
+
+	return rfds, nil
 }
 
 func GetAuthors() ([]models.Author, error) {
@@ -119,12 +167,13 @@ func normalizeTags(tags []string) []string {
 	return normalized
 }
 
-// normalizeAndStoreAuthors parses author strings, stores in authors table,
-// and returns normalized author identifiers (emails when available)
-func normalizeAndStoreAuthors(authors []string) []string {
-	normalized := make([]string, 0, len(authors))
+// processRFDAuthors processes author strings from RFD frontmatter
+// and returns the IDs of the authors (creating them if necessary)
+func processRFDAuthors(authorStrings []string) ([]string, error) {
+	var authorIDs []string
+	seen := make(map[string]bool)
 
-	for _, authorStr := range authors {
+	for _, authorStr := range authorStrings {
 		// Handle comma-separated authors within single entries
 		splitAuthors := strings.Split(authorStr, ",")
 
@@ -134,133 +183,102 @@ func normalizeAndStoreAuthors(authors []string) []string {
 				continue
 			}
 
+			// Parse and find/create author
 			name, email := models.ParseAuthor(singleAuthor)
-			canonicalIdentifier := findOrCreateCanonicalAuthor(name, email)
+			author, err := FindOrCreateAuthor(name, email)
+			if err != nil {
+				// Log error but continue processing other authors
+				log.Printf("Error processing author '%s': %v", singleAuthor, err)
+				continue
+			}
 
-			if canonicalIdentifier != "" {
-				normalized = append(normalized, canonicalIdentifier)
+			// Avoid duplicates
+			if !seen[author.ID] {
+				authorIDs = append(authorIDs, author.ID)
+				seen[author.ID] = true
 			}
 		}
 	}
 
-	return normalized
+	return authorIDs, nil
 }
 
-// findOrCreateCanonicalAuthor finds existing related authors or creates new ones
-// Returns the canonical identifier (email if available, name otherwise)
-func findOrCreateCanonicalAuthor(name, email string) string {
-	// Case 1: We have both name and email - this is the best case
-	if email != "" && name != "" {
-		// Check if this exact author already exists
-		if existingAuthor, err := _dataStore.GetAuthorByEmail(email); err == nil && existingAuthor != nil {
-			// Update the name if it's better (not empty and current is empty)
-			if existingAuthor.Name == "" && name != "" {
-				existingAuthor.Name = name
-				_ = _dataStore.CreateOrUpdateAuthor(existingAuthor)
-			}
-			return email
-		}
+// FindOrCreateAuthor is the ONLY place where author lookup/creation logic lives
+// Priority: email > name
+// Auto-merges when finding existing authors
+func FindOrCreateAuthor(name, email string) (*models.Author, error) {
+	// 1. Parse and clean inputs
+	name = strings.TrimSpace(name)
+	email = strings.TrimSpace(email)
 
-		// Check if we have a name-only version of this author that we can link
-		if relatedAuthor := findAuthorByNameOrEmail(name); relatedAuthor != nil {
-			// We found a related author - don't create duplicate, just ensure this email version exists
-			// Create the email-based version as the canonical one
-			author := &models.Author{
-				Email: email,
-				Name:  name,
-			}
-			_ = _dataStore.CreateOrUpdateAuthor(author)
-			return email
+	// If input looks like "Name <email>", parse it
+	if strings.Contains(name, "<") && strings.Contains(name, ">") {
+		parsedName, parsedEmail := models.ParseAuthor(name)
+		if parsedName != "" {
+			name = parsedName
 		}
-
-		// Create new email-based author
-		author := &models.Author{
-			Email: email,
-			Name:  name,
+		if parsedEmail != "" {
+			email = parsedEmail
 		}
-		_ = _dataStore.CreateOrUpdateAuthor(author)
-		return email
 	}
 
-	// Case 2: We have only email
+	// 2. Validate email format
+	if email != "" && !strings.Contains(email, "@") {
+		email = ""
+	}
+
+	// 3. Search by email first (most unique)
 	if email != "" {
-		// Check if this email already exists
-		if existingAuthor, err := _dataStore.GetAuthorByEmail(email); err == nil && existingAuthor != nil {
-			return email
+		author, err := _dataStore.GetAuthorByEmail(email)
+		if err != nil {
+			return nil, fmt.Errorf("error searching author by email: %w", err)
 		}
-
-		// Create new email-only author
-		author := &models.Author{
-			Email: email,
-			Name:  "", // Will be updated if we later get name info
-		}
-		_ = _dataStore.CreateOrUpdateAuthor(author)
-		return email
-	}
-
-	// Case 3: We have only name
-	if name != "" {
-		// Check if we already have an email-based version of this author
-		if relatedAuthor := findAuthorByNameOrEmail(name); relatedAuthor != nil {
-			// Always prefer email-based identifier if one exists
-			if relatedAuthor.Email != relatedAuthor.Name {
-				// This is an email-based author, use email
-				return relatedAuthor.Email
-			} else {
-				// This is a name-only author, use name
-				return relatedAuthor.Name
-			}
-		}
-
-		// Create new name-only author
-		author := &models.Author{
-			Email: name, // Store name as email for name-only authors
-			Name:  name,
-		}
-		_ = _dataStore.CreateOrUpdateAuthor(author)
-		return name
-	}
-
-	return ""
-}
-
-// findAuthorByNameOrEmail looks for existing related authors
-// This handles cases like finding "Aaron Ogle" when we have "aaron.ogle@rocket.chat"
-func findAuthorByNameOrEmail(searchTerm string) *models.Author {
-	// First try exact email match
-	if author, err := _dataStore.GetAuthorByEmail(searchTerm); err == nil && author != nil {
-		return author
-	}
-
-	// Get all authors and search for related ones
-	authors, err := _dataStore.GetAuthors()
-	if err != nil {
-		return nil
-	}
-
-	searchLower := strings.ToLower(strings.TrimSpace(searchTerm))
-
-	for _, author := range authors {
-		// Exact name match
-		if strings.ToLower(author.Name) == searchLower {
-			return &author
-		}
-
-		// Check if email local part matches the name
-		if strings.Contains(author.Email, "@") {
-			emailParts := strings.Split(author.Email, "@")
-			if len(emailParts) == 2 {
-				localPart := strings.ToLower(emailParts[0])
-				// Handle formats like "aaron.ogle" matching "Aaron Ogle"
-				normalizedSearch := strings.ReplaceAll(searchLower, " ", ".")
-				if localPart == normalizedSearch {
-					return &author
+		if author != nil {
+			// Update name if we have it but author doesn't, or if current name is more complete
+			if name != "" && (author.Name == "" || len(name) > len(author.Name)) {
+				author.Name = name
+				if err := _dataStore.UpdateAuthor(author); err != nil {
+					return nil, fmt.Errorf("error updating author name: %w", err)
 				}
 			}
+			return author, nil
 		}
 	}
 
-	return nil
+	// 4. Search by name if no email match (exact match only - no partial matching)
+	if name != "" {
+		author, err := _dataStore.GetAuthorByName(name)
+		if err != nil {
+			return nil, fmt.Errorf("error searching author by name: %w", err)
+		}
+		if author != nil {
+			// Update email if we have it but author doesn't
+			if email != "" && author.Email == "" {
+				author.Email = email
+				if err := _dataStore.UpdateAuthor(author); err != nil {
+					return nil, fmt.Errorf("error updating author email: %w", err)
+				}
+			}
+			return author, nil
+		}
+	}
+
+	// 5. No match found - create new author
+	// Don't create author with no identifying information
+	if name == "" && email == "" {
+		return nil, fmt.Errorf("cannot create author with no name or email")
+	}
+
+	author := &models.Author{
+		Name:  name,
+		Email: email,
+	}
+
+	if err := _dataStore.CreateAuthor(author); err != nil {
+		return nil, fmt.Errorf("error creating author: %w", err)
+	}
+
+	return author, nil
 }
 
 func GetRFDsByTag(tag string) ([]models.RFD, error) {
@@ -287,12 +305,34 @@ func GetRFDsByTag(tag string) ([]models.RFD, error) {
 }
 
 func GetRFDByID(id string) (*models.RFD, error) {
-	if id != "" && !_validId.Match([]byte(id)) {
-		return nil, nil
+	if id == "" {
+		return nil, errors.New("no id provided")
 	}
 
-	if len(id) < 4 {
-		id = fmt.Sprintf("%04s", id)
+	// Handle "latest" by getting the highest numbered RFD
+	if id == "latest" {
+		rfds, err := _dataStore.GetRFDs()
+		if err != nil {
+			return nil, err
+		}
+		if len(rfds) == 0 {
+			return nil, errors.New("no RFDs found")
+		}
+
+		// Find the highest ID
+		var maxID int64 = 0
+		var latestID string
+		for _, rfd := range rfds {
+			if idNum, err := strconv.ParseInt(rfd.ID, 10, 64); err == nil && idNum > maxID {
+				maxID = idNum
+				latestID = rfd.ID
+			}
+		}
+
+		if latestID == "" {
+			return nil, errors.New("no valid RFD IDs found")
+		}
+		id = latestID
 	}
 
 	return _dataStore.GetRFDByID(id)
@@ -343,20 +383,34 @@ func CreateRFD(newRFD *models.RFDCreatePayload) (*models.RFD, error) {
 		return nil, err
 	}
 
-	rfdMeta.Title = newRFD.Title
-	rfdMeta.Authors = strings.Split(newRFD.Authors, ",")
-	rfdMeta.State = models.Ideation
+	// Create a temporary struct for YAML serialization that uses string authors
+	type yamlRFDMeta struct {
+		Title      string   `yaml:"title"`
+		Authors    []string `yaml:"authors"`
+		State      string   `yaml:"state"`
+		Discussion string   `yaml:"discussion"`
+		Tags       []string `yaml:"tags"`
+		Public     bool     `yaml:"public"`
+	}
+
+	yamlMeta := yamlRFDMeta{
+		Title:      newRFD.Title,
+		Authors:    strings.Split(newRFD.Authors, ","),
+		State:      string(models.Ideation),
+		Discussion: rfdMeta.Discussion,
+		Public:     rfdMeta.Public,
+	}
 
 	// Something to do with the split seems to cause it to put an empty set of quotes here if we don't do this
 	if newRFD.Tags != "" {
-		rfdMeta.Tags = strings.Split(newRFD.Tags, ",")
+		yamlMeta.Tags = strings.Split(newRFD.Tags, ",")
 	}
 
 	rfdSeperater := []byte(`---
 `)
 
 	log.Println("Marshalling RFD Meta Frontmatter")
-	header, err := yaml.Marshal(rfdMeta)
+	header, err := yaml.Marshal(yamlMeta)
 	if err != nil {
 		return nil, err
 	}
@@ -556,16 +610,31 @@ func GetRFDCodespaceLink(rfdNum string) (string, error) {
 	return githubDevLink, nil
 }
 
-func updateRFD(existing *models.RFD, updated *models.RFD) error {
+func updateRFD(existing *models.RFD, updated *models.RFD, skipDiscussion bool) error {
 	// Make a copy of existing for webhook comparison
 	oldCopy := *existing
+
+	// Process authors from AuthorStrings (parsed from YAML)
+	authorIDs, err := processRFDAuthors(updated.AuthorStrings)
+	if err != nil {
+		return fmt.Errorf("failed to process authors: %w", err)
+	}
+
+	// Clear temporary author strings - we don't store these
+	updated.AuthorStrings = nil
+	// Authors will be populated from relationships
 
 	if err := _dataStore.UpdateRFD(updated); err != nil {
 		return err
 	}
 
-	// Send webhook for update (only if there are changes)
-	if _webhookClient != nil {
+	// Update author relationships
+	if err := _dataStore.UpdateAuthorsForRFD(updated.ID, authorIDs); err != nil {
+		return fmt.Errorf("failed to update authors for RFD: %w", err)
+	}
+
+	// Send webhook for update (only if there are changes and not skipping discussion)
+	if _webhookClient != nil && !skipDiscussion {
 		resp, err := _webhookClient.SendUpdated(&oldCopy, updated)
 		if err != nil {
 			log.Printf("Failed to send update webhook for RFD %s: %v", updated.ID, err)
@@ -670,9 +739,15 @@ func CreateOrUpdateRFD(rfd *models.RFD, skipDiscussion bool) error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	// Normalize authors and extract to authors table
-	normalizedAuthors := normalizeAndStoreAuthors(rfd.Authors)
-	rfd.Authors = normalizedAuthors
+	// Process authors from AuthorStrings (parsed from YAML)
+	authorIDs, err := processRFDAuthors(rfd.AuthorStrings)
+	if err != nil {
+		return fmt.Errorf("failed to process authors: %w", err)
+	}
+
+	// Clear temporary author strings - we don't store these
+	rfd.AuthorStrings = nil
+	// Authors will be populated from relationships
 
 	// Normalize tags
 	rfd.Tags = normalizeTags(rfd.Tags)
@@ -683,12 +758,17 @@ func CreateOrUpdateRFD(rfd *models.RFD, skipDiscussion bool) error {
 	}
 
 	if existingRFD != nil {
-		return updateRFD(existingRFD, rfd)
+		return updateRFD(existingRFD, rfd, skipDiscussion)
 	}
 
 	// Use ImportRFD to allow arbitrary IDs (for bulk imports from existing repos)
 	if err := _dataStore.ImportRFD(rfd); err != nil {
 		return err
+	}
+
+	// Link authors to the RFD (authorIDs already obtained from normalizeAndStoreAuthors)
+	if err := _dataStore.LinkAuthorsToRFD(rfd.ID, authorIDs); err != nil {
+		return fmt.Errorf("failed to link authors to RFD: %w", err)
 	}
 
 	// Send webhook for new RFD and handle discussion URL response

@@ -122,3 +122,68 @@ func GetRFDsForTagHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, rfds)
 }
+
+// GetAuthorsHandler returns list of authors in json
+func GetAuthorsHandler(c *gin.Context) {
+	authors, err := core.GetAuthors()
+	if err != nil {
+		handleErrorJSON(c, "get authors", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"authors": authors})
+}
+
+// GetAuthorHandler gets a single author by id
+func GetAuthorHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	if id == "" {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	author, err := core.GetAuthorByID(id)
+	if err != nil {
+		handleErrorJSON(c, "getting author by id", err)
+		return
+	}
+
+	if author == nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	c.JSON(http.StatusOK, author)
+}
+
+// GetAuthorRFDsHandler gets RFDs for a specific author
+func GetAuthorRFDsHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	if id == "" {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	// First verify the author exists
+	author, err := core.GetAuthorByID(id)
+	if err != nil {
+		handleErrorJSON(c, "getting author by id", err)
+		return
+	}
+
+	if author == nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	// Get RFDs by the author ID
+	rfds, err := core.GetRFDsByAuthor(author.ID)
+	if err != nil {
+		handleErrorJSON(c, "getting RFDs by author", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"rfds": rfds})
+}

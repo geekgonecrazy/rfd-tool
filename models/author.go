@@ -52,3 +52,8 @@ func FormatAuthor(name, email string) string {
 	}
 	return name + " <" + email + ">"
 }
+
+// DisplayString returns a formatted string for the author (name <email> or just name/email)
+func (a Author) DisplayString() string {
+	return FormatAuthor(a.Name, a.Email)
+}

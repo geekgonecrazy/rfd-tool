@@ -3,7 +3,6 @@ package controllers
 import (
 	"html/template"
 	"net/http"
-	"strings"
 
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/core"
@@ -30,12 +29,9 @@ func DefaultRouteHandler(c *gin.Context) {
 		return
 	}
 
-	authorMap, authorIDMap := getAuthorMaps(isPublicView)
 	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{
 		"siteName":     config.Config.Site.Name,
 		"rfds":         rfds,
-		"authorMap":    authorMap,
-		"authorIDMap":  authorIDMap,
 		"isLoggedIn":   loggedIn,
 		"isPublicView": isPublicView,
 	})
@@ -65,8 +61,8 @@ func AuthorListPageHandler(c *gin.Context) {
 
 	var rfds []models.RFD
 	if loggedIn {
-		// Logged in: get all RFDs by this author (using email)
-		rfds, err = core.GetRFDsByAuthor(author.Email)
+		// Logged in: get all RFDs by this author
+		rfds, err = core.GetRFDsByAuthor(author.ID)
 	} else {
 		// Not logged in: get only public RFDs by this author
 		rfds, err = core.GetPublicRFDsByAuthorID(authorID)
@@ -83,13 +79,10 @@ func AuthorListPageHandler(c *gin.Context) {
 		authorDisplayName = author.Email
 	}
 
-	authorMap, authorIDMap := getAuthorMaps(isPublicView)
 	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{
 		"siteName":     config.Config.Site.Name,
 		"rfds":         rfds,
 		"authorFilter": authorDisplayName,
-		"authorMap":    authorMap,
-		"authorIDMap":  authorIDMap,
 		"isLoggedIn":   loggedIn,
 		"isPublicView": isPublicView,
 	})
@@ -120,13 +113,10 @@ func TagListPageHandler(c *gin.Context) {
 		return
 	}
 
-	authorMap, authorIDMap := getAuthorMaps(isPublicView)
 	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{
 		"siteName":     config.Config.Site.Name,
 		"rfds":         rfds,
 		"tagFilter":    tag,
-		"authorMap":    authorMap,
-		"authorIDMap":  authorIDMap,
 		"isLoggedIn":   loggedIn,
 		"isPublicView": isPublicView,
 	})
@@ -174,14 +164,10 @@ func RFDPageHandler(c *gin.Context) {
 	}
 
 	content := template.HTML(rfd.Content)
-	authorMap, authorIDMap := getAuthorMaps(isPublicView)
-
 	c.HTML(http.StatusOK, "rfd.tmpl", gin.H{
 		"siteName":     config.Config.Site.Name,
 		"rfd":          rfd,
 		"content":      content,
-		"authorMap":    authorMap,
-		"authorIDMap":  authorIDMap,
 		"isLoggedIn":   loggedIn,
 		"isPublicView": isPublicView,
 	})
@@ -195,53 +181,12 @@ func RFDListPageHandler(c *gin.Context) {
 		return
 	}
 
-	authorMap, authorIDMap := getAuthorMaps(false)
 	c.HTML(http.StatusOK, "rfdList.tmpl", gin.H{
 		"siteName":     config.Config.Site.Name,
 		"rfds":         rfds,
-		"authorMap":    authorMap,
-		"authorIDMap":  authorIDMap,
 		"isLoggedIn":   true,
 		"isPublicView": false,
 	})
-}
-
-// getAuthorMaps returns maps for author display
-// authorMap: email -> display name
-// authorIDMap: email -> author ID (for URL construction)
-// When isPublicView is true, emails fallback to empty string to avoid exposure
-func getAuthorMaps(isPublicView bool) (map[string]string, map[string]string) {
-	authorMap := make(map[string]string)
-	authorIDMap := make(map[string]string)
-
-	authors, err := core.GetAuthors()
-	if err != nil {
-		return authorMap, authorIDMap
-	}
-
-	for _, a := range authors {
-		// Set the display name
-		if a.Name != "" {
-			authorMap[a.Email] = a.Name
-			// Also map by name so RFDs with name-only authors can be resolved
-			authorMap[a.Name] = a.Name
-			// Only set authorIDMap[a.Name] if not already set, or if this author has an email (prefer email-based authors)
-			if _, exists := authorIDMap[a.Name]; !exists || strings.Contains(a.Email, "@") {
-				authorIDMap[a.Name] = a.ID
-			}
-		} else if isPublicView {
-			// For public view, don't show email if no name
-			authorMap[a.Email] = "Unknown"
-		} else {
-			// For logged-in view, fall back to email
-			authorMap[a.Email] = a.Email
-		}
-
-		// Map email to author ID for URL construction
-		authorIDMap[a.Email] = a.ID
-	}
-
-	return authorMap, authorIDMap
 }
 
 // RFDCreatePageHandler Returns UI for creating RFD

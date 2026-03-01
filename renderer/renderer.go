@@ -50,9 +50,19 @@ func init() {
 func RenderRFD(rfdNum string, f io.Reader) (*models.RFD, error) {
 	rfd := models.RFD{}
 
-	rfdMeta := models.RFDMeta{}
+	// Use a temporary struct for YAML parsing
+	type yamlMeta struct {
+		Title      string          `yaml:"title"`
+		Authors    []string        `yaml:"authors"`
+		State      models.RFDState `yaml:"state"`
+		Discussion string          `yaml:"discussion"`
+		Tags       []string        `yaml:"tags"`
+		Public     bool            `yaml:"public"`
+	}
 
-	body, err := frontmatter.Parse(f, &rfdMeta)
+	var meta yamlMeta
+
+	body, err := frontmatter.Parse(f, &meta)
 	if err != nil {
 		return nil, err
 	}
@@ -62,10 +72,21 @@ func RenderRFD(rfdNum string, f io.Reader) (*models.RFD, error) {
 		return nil, err
 	}
 
+	// Convert to RFDMeta
 	rfd.ID = rfdNum
-	rfd.RFDMeta = rfdMeta
+	rfd.RFDMeta = models.RFDMeta{
+		Title:      meta.Title,
+		Authors:    []models.Author{}, // Will be populated by core after processing
+		State:      meta.State,
+		Discussion: meta.Discussion,
+		Tags:       meta.Tags,
+		Public:     meta.Public,
+	}
 	rfd.ContentMD = string(body)
 	rfd.Content = string(buf.Bytes())
+
+	// Store the author strings temporarily for core to process
+	rfd.AuthorStrings = meta.Authors
 
 	return &rfd, nil
 }

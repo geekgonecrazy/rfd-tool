@@ -47,7 +47,8 @@ repo:
     # upload the other to repo deployment with write access
 
 dataPath: ./
-store: sqlite  # sqlite or boltdb (default: sqlite)
+store: sqlite  # sqlite (default: sqlite)
+databaseName: rfd.db  # Database filename (default: rfd.db)
 oidc:
   clientId: #clientId
   clientSecret: #clientSecret

@@ -42,9 +42,9 @@ type Payload struct {
 
 // Response is the expected response from the webhook endpoint
 type Response struct {
-	Success    bool              `json:"success"`
-	Error      string            `json:"error,omitempty"`
-	Discussion *DiscussionInfo   `json:"discussion,omitempty"`
+	Success    bool            `json:"success"`
+	Error      string          `json:"error,omitempty"`
+	Discussion *DiscussionInfo `json:"discussion,omitempty"`
 }
 
 // DiscussionInfo contains information about the created discussion
@@ -157,8 +157,17 @@ func detectChanges(old, new *models.RFD) *RFDChanges {
 		hasChanges = true
 	}
 
-	if !stringSliceEqual(old.Authors, new.Authors) {
-		changes.Authors = &FieldChange{Old: old.Authors, New: new.Authors}
+	if !authorSliceEqual(old.Authors, new.Authors) {
+		// Convert to string slice for the webhook payload
+		oldAuthors := make([]string, len(old.Authors))
+		for i, a := range old.Authors {
+			oldAuthors[i] = a.DisplayString()
+		}
+		newAuthors := make([]string, len(new.Authors))
+		for i, a := range new.Authors {
+			newAuthors[i] = a.DisplayString()
+		}
+		changes.Authors = &FieldChange{Old: oldAuthors, New: newAuthors}
 		hasChanges = true
 	}
 
@@ -185,6 +194,19 @@ func stringSliceEqual(a, b []string) bool {
 		return false
 	}
 	return reflect.DeepEqual(a, b)
+}
+
+func authorSliceEqual(a, b []models.Author) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	// Compare by IDs
+	for i := range a {
+		if a[i].ID != b[i].ID {
+			return false
+		}
+	}
+	return true
 }
 
 // sendSync delivers the webhook payload and waits for the response

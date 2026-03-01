@@ -29,7 +29,7 @@
                 </div>
             </div>
             <div class="rfd-header-bar">
-                 <h1 class="rfd-title">Architecture Decision Records</h1>
+                 <h1 class="rfd-title">{{.siteName}}</h1>
                  {{if .isLoggedIn}}
                  <a href="/create" class="create-button">
                      <span>&#10133;</span><span class="create-button-text">Create New</span>
@@ -71,12 +71,12 @@
                     <div class="rfd-card-meta">
                         <!-- Authors from template -->
                         <div class="authors-list">
-                             {{ range $i, $author := $rfd.Authors }}
-                                <a href="/author/{{index $.authorIDMap $author}}" class="author-item" title="{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}">
+{{ range $i, $author := $rfd.Authors }}
+                                <a href="/author/{{$author.ID}}" class="author-item" title="{{if $author.Name}}{{$author.Name}}{{else}}{{$author.Email}}{{end}}">
                                     <svg class="author-icon" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                                    <span>{{if index $.authorMap $author}}{{index $.authorMap $author}}{{else}}{{$author}}{{end}}</span>
+                                    <span>{{if $author.Name}}{{$author.Name}}{{else}}{{$author.Email}}{{end}}</span>
                                 </a>
-                             {{end}}
+                              {{end}}
                         </div>
                         <!-- Tags from template -->
                         <div class="tags-list">

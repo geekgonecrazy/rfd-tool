@@ -17,7 +17,8 @@ var Config *config
 type config struct {
 	Site              siteConfig     `yaml:"site" json:"site"`
 	DataPath          string         `yaml:"dataPath" json:"dataPath"`
-	Store             string         `yaml:"store" json:"store"` // "sqlite" or "boltdb" (default: sqlite)
+	Store             string         `yaml:"store" json:"store"`               // "sqlite" (default: sqlite)
+	DatabaseName      string         `yaml:"databaseName" json:"databaseName"` // Database filename (default: rfd.db)
 	APISecret         string         `yaml:"apiSecret" json:"apiSecret"`
 	OIDC              oidcConfig     `yaml:"oidc" json:"oidc"`
 	Github            githubConfig   `yaml:"github" json:"github"`

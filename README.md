@@ -89,3 +89,68 @@ RFD Tool supports both Mermaid and D2 diagrams within your RFD documents:
 
 Both diagram types can be used together in the same document. See the [example RFD](docs/example-rfd.md) for a comprehensive demonstration of mixed diagram usage.
 
+## Data Management
+
+### Import ADRs/RFDs
+
+The RFD tool includes a client for importing existing ADRs from external repositories:
+
+```bash
+# Build the import client
+go build -o rfd-client ./cmd/rfd-client
+
+# Set environment variables for your production instance
+export RFD_SERVER=https://your-rfd-site.com
+export RFD_TOKEN=your-api-secret-token
+
+# Import from main folder (e.g., for ADRs in a single directory)
+./rfd-client -import -folder /path/to/adrs -skip-discussion
+
+# Import from git branches (e.g., for branch-based ADR workflows)
+./rfd-client -import-branches -repo /path/to/repo -rfd-folder adr -skip-discussion
+
+# Import a single RFD
+./rfd-client -rfd 0001 -folder /path/to/adrs
+```
+
+**Parameters:**
+- `-import`: Import all ADRs from a folder
+- `-import-branches`: Import ADRs from git branches in a repository
+- `-folder`: Path to folder containing ADR files
+- `-repo`: Path to git repository (for branch imports)
+- `-rfd-folder`: Folder name within repo containing ADRs (default: "adr")
+- `-skip-discussion`: Skip creating GitHub discussions during bulk imports
+- `-rfd NNNN`: Import a specific RFD by number
+
+### API Access
+
+All API endpoints use token authentication. Include the API token in requests:
+
+```bash
+# Get all authors
+curl -H "api-token: your-token" "https://your-rfd-site.com/api/v1/authors"
+
+# Get all RFDs
+curl -H "api-token: your-token" "https://your-rfd-site.com/api/v1/rfds"
+
+# Get RFDs by author
+curl -H "api-token: your-token" "https://your-rfd-site.com/api/v1/authors/{author-id}/rfds"
+
+# Get a specific RFD
+curl -H "api-token: your-token" "https://your-rfd-site.com/api/v1/rfds/{rfd-id}"
+```
+
+### Database Migrations
+
+The system includes an automatic migration system:
+
+```bash
+# Run pending migrations
+./rfd-server migrate -configFile config.yaml
+
+# Check migration status  
+./rfd-server migrate -configFile config.yaml status
+```
+
+Migrations are automatically applied on server startup, but you can run them manually if needed.
+

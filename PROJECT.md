@@ -11,7 +11,7 @@ Inspired by [Oxide's RFD process](https://oxide.computer/blog/rfd-1-requests-for
 ### Tech Stack
 - **Language**: Go 1.24
 - **Web Framework**: Gin
-- **Database**: SQLite (primary) or BoltDB
+- **Database**: SQLite
 - **Authentication**: OIDC (OpenID Connect)
 - **Templates**: Go HTML templates
 - **Styling**: Custom CSS (dark theme)
@@ -34,8 +34,7 @@ Inspired by [Oxide's RFD process](https://oxide.computer/blog/rfd-1-requests-for
 │   └── d2/              # D2 diagram support
 ├── router/              # Route definitions
 ├── store/               # Data persistence
-│   ├── sqlitestore/     # SQLite implementation
-│   └── boltstore/       # BoltDB implementation
+│   └── sqlitestore/     # SQLite implementation
 ├── templates/           # HTML templates
 ├── assets/              # Static assets (CSS, logo)
 ├── webhook/             # GitHub webhook handler

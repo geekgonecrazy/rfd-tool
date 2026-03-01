@@ -11,7 +11,6 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/geekgonecrazy/rfd-tool/config"
 	"github.com/geekgonecrazy/rfd-tool/store"
-	"github.com/geekgonecrazy/rfd-tool/store/boltstore"
 	"github.com/geekgonecrazy/rfd-tool/store/sqlitestore"
 	"github.com/geekgonecrazy/rfd-tool/webhook"
 	"github.com/go-git/go-git/v5"
@@ -52,10 +51,8 @@ func Setup() error {
 	switch storeType {
 	case "sqlite":
 		dataStore, err = sqlitestore.New()
-	case "boltdb":
-		dataStore, err = boltstore.New()
 	default:
-		return fmt.Errorf("unknown store type: %s (valid options: sqlite, boltdb)", storeType)
+		return fmt.Errorf("unknown store type: %s (valid option: sqlite)", storeType)
 	}
 
 	if err != nil {
