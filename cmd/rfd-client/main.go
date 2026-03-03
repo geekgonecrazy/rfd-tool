@@ -128,16 +128,18 @@ func sendRFD(rfd *models.RFD) error {
 		return err
 	}
 
-	var r models.RFD
+	var result struct {
+		RFD models.RFD `json:"rfd"`
+	}
 
-	err = json.NewDecoder(resp.Body).Decode(&r)
+	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
 
-	log.Println("returned..", r)
+	log.Println("returned..", result.RFD)
 
 	return nil
 }

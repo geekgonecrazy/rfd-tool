@@ -535,7 +535,7 @@ func UpdateRFDDiscussionInRepo(rfdNum string, discussionURL string) error {
 	}
 
 	// Parse frontmatter
-	var rfdMeta models.RFDMeta
+	var rfdMeta models.RFDMetaYAML
 	body, err := frontmatter.Parse(f, &rfdMeta)
 	f.Close()
 	if err != nil {
@@ -739,16 +739,6 @@ func CreateOrUpdateRFD(rfd *models.RFD, skipDiscussion bool) error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	// Process authors from AuthorStrings (parsed from YAML)
-	authorIDs, err := processRFDAuthors(rfd.AuthorStrings)
-	if err != nil {
-		return fmt.Errorf("failed to process authors: %w", err)
-	}
-
-	// Clear temporary author strings - we don't store these
-	rfd.AuthorStrings = nil
-	// Authors will be populated from relationships
-
 	// Normalize tags
 	rfd.Tags = normalizeTags(rfd.Tags)
 
@@ -758,8 +748,18 @@ func CreateOrUpdateRFD(rfd *models.RFD, skipDiscussion bool) error {
 	}
 
 	if existingRFD != nil {
+		// Don't clear AuthorStrings here - updateRFD will process them
 		return updateRFD(existingRFD, rfd, skipDiscussion)
 	}
+
+	// Process authors from AuthorStrings for new RFDs
+	authorIDs, err := processRFDAuthors(rfd.AuthorStrings)
+	if err != nil {
+		return fmt.Errorf("failed to process authors: %w", err)
+	}
+
+	// Clear temporary author strings - we don't store these
+	rfd.AuthorStrings = nil
 
 	// Use ImportRFD to allow arbitrary IDs (for bulk imports from existing repos)
 	if err := _dataStore.ImportRFD(rfd); err != nil {
