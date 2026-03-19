@@ -76,12 +76,16 @@ func (s *sqliteStore) initSchema() error {
 		public INTEGER NOT NULL DEFAULT 0,
 		content TEXT NOT NULL DEFAULT '',
 		content_md TEXT NOT NULL DEFAULT '',
+		pr_link TEXT NOT NULL DEFAULT '',
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		modified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`)
 	if err != nil {
 		return err
 	}
+
+	// Migration: Add pr_link column if it doesn't exist (for existing databases)
+	_, _ = tx.Exec(`ALTER TABLE rfds ADD COLUMN pr_link TEXT NOT NULL DEFAULT ''`)
 
 	// Create tags table
 	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS tags (

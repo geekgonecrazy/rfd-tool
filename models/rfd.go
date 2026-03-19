@@ -8,6 +8,7 @@ type RFD struct {
 
 	Content   string `json:"content"`
 	ContentMD string `json:"contentMD"`
+	PRLink    string `json:"prLink,omitempty"` // Link to open PR (set by rfd-client from CI)
 
 	CreatedAt  time.Time `json:"createdAt"`
 	ModifiedAt time.Time `json:"modifiedAt"`

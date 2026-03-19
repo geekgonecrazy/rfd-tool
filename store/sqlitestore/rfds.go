@@ -14,7 +14,7 @@ func (s *sqliteStore) GetRFDByID(id string) (*models.RFD, error) {
 	rows, err := s.db.Query(`
 		SELECT 
 			r.id, r.title, r.state, r.discussion, r.tags, r.public, 
-			r.content, r.content_md, r.created_at, r.modified_at,
+			r.content, r.content_md, r.pr_link, r.created_at, r.modified_at,
 			a.id, a.email, a.name, a.created_at, a.modified_at
 		FROM rfds r
 		LEFT JOIN rfd_authors ra ON r.id = ra.rfd_id
@@ -42,12 +42,12 @@ func scanRFDWithAuthors(rows *sql.Rows) (*models.RFD, error) {
 		var authorCreatedAt, authorModifiedAt sql.NullTime
 
 		// Create temp variables for RFD data
-		var rfdID, title, state, discussion, content, contentMD string
+		var rfdID, title, state, discussion, content, contentMD, prLink string
 		var createdAt, modifiedAt time.Time
 
 		err := rows.Scan(
 			&rfdID, &title, &state, &discussion, &tagsJSON, &publicInt,
-			&content, &contentMD, &createdAt, &modifiedAt,
+			&content, &contentMD, &prLink, &createdAt, &modifiedAt,
 			&authorID, &authorEmail, &authorName, &authorCreatedAt, &authorModifiedAt,
 		)
 		if err != nil {
@@ -67,6 +67,7 @@ func scanRFDWithAuthors(rows *sql.Rows) (*models.RFD, error) {
 				},
 				Content:    content,
 				ContentMD:  contentMD,
+				PRLink:     prLink,
 				CreatedAt:  createdAt,
 				ModifiedAt: modifiedAt,
 			}
@@ -122,7 +123,7 @@ func (s *sqliteStore) GetRFDs() ([]models.RFD, error) {
 	rows, err := s.db.Query(`
 		SELECT 
 			r.id, r.title, r.state, r.discussion, r.tags, r.public, 
-			r.content, r.content_md, r.created_at, r.modified_at,
+			r.content, r.content_md, r.pr_link, r.created_at, r.modified_at,
 			a.id, a.email, a.name, a.created_at, a.modified_at
 		FROM rfds r
 		LEFT JOIN rfd_authors ra ON r.id = ra.rfd_id
@@ -149,12 +150,12 @@ func scanRFDsWithAuthors(rows *sql.Rows) ([]models.RFD, error) {
 		var authorCreatedAt, authorModifiedAt sql.NullTime
 
 		// Create temp variables for RFD data
-		var rfdID, title, state, discussion, content, contentMD string
+		var rfdID, title, state, discussion, content, contentMD, prLink string
 		var createdAt, modifiedAt time.Time
 
 		err := rows.Scan(
 			&rfdID, &title, &state, &discussion, &tagsJSON, &publicInt,
-			&content, &contentMD, &createdAt, &modifiedAt,
+			&content, &contentMD, &prLink, &createdAt, &modifiedAt,
 			&authorID, &authorEmail, &authorName, &authorCreatedAt, &authorModifiedAt,
 		)
 		if err != nil {
@@ -175,6 +176,7 @@ func scanRFDsWithAuthors(rows *sql.Rows) ([]models.RFD, error) {
 				},
 				Content:    content,
 				ContentMD:  contentMD,
+				PRLink:     prLink,
 				CreatedAt:  createdAt,
 				ModifiedAt: modifiedAt,
 			}
@@ -233,7 +235,7 @@ func (s *sqliteStore) GetPublicRFDByID(id string) (*models.RFD, error) {
 	rows, err := s.db.Query(`
 		SELECT 
 			r.id, r.title, r.state, r.discussion, r.tags, r.public, 
-			r.content, r.content_md, r.created_at, r.modified_at,
+			r.content, r.content_md, r.pr_link, r.created_at, r.modified_at,
 			a.id, a.email, a.name, a.created_at, a.modified_at
 		FROM rfds r
 		LEFT JOIN rfd_authors ra ON r.id = ra.rfd_id
@@ -274,7 +276,7 @@ func (s *sqliteStore) GetPublicRFDs() ([]models.RFD, error) {
 	rows, err := s.db.Query(`
 		SELECT 
 			r.id, r.title, r.state, r.discussion, r.tags, r.public, 
-			r.content, r.content_md, r.created_at, r.modified_at,
+			r.content, r.content_md, r.pr_link, r.created_at, r.modified_at,
 			a.id, a.email, a.name, a.created_at, a.modified_at
 		FROM rfds r
 		LEFT JOIN rfd_authors ra ON r.id = ra.rfd_id
@@ -338,9 +340,9 @@ func (s *sqliteStore) insertRFD(rfd *models.RFD) error {
 	}
 
 	_, err = s.db.Exec(`
-		INSERT INTO rfds (id, title, state, discussion, tags, public, content, content_md, created_at, modified_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, rfd.ID, rfd.Title, string(rfd.State), rfd.Discussion, string(tagsJSON), publicInt, rfd.Content, rfd.ContentMD, rfd.CreatedAt, rfd.ModifiedAt)
+		INSERT INTO rfds (id, title, state, discussion, tags, public, content, content_md, pr_link, created_at, modified_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, rfd.ID, rfd.Title, string(rfd.State), rfd.Discussion, string(tagsJSON), publicInt, rfd.Content, rfd.ContentMD, rfd.PRLink, rfd.CreatedAt, rfd.ModifiedAt)
 
 	return err
 }
@@ -367,11 +369,21 @@ func (s *sqliteStore) UpdateRFD(rfd *models.RFD) error {
 		publicInt = 1
 	}
 
-	_, err = s.db.Exec(`
-		UPDATE rfds
-		SET title = ?, state = ?, discussion = ?, tags = ?, public = ?, content = ?, content_md = ?, modified_at = ?
-		WHERE id = ?
-	`, rfd.Title, string(rfd.State), rfd.Discussion, string(tagsJSON), publicInt, rfd.Content, rfd.ContentMD, rfd.ModifiedAt, rfd.ID)
+	// If PRLink is empty, preserve the existing one (don't overwrite with empty)
+	// This handles the case where an update comes from main branch merge (no PR context)
+	if rfd.PRLink == "" {
+		_, err = s.db.Exec(`
+			UPDATE rfds
+			SET title = ?, state = ?, discussion = ?, tags = ?, public = ?, content = ?, content_md = ?, modified_at = ?
+			WHERE id = ?
+		`, rfd.Title, string(rfd.State), rfd.Discussion, string(tagsJSON), publicInt, rfd.Content, rfd.ContentMD, rfd.ModifiedAt, rfd.ID)
+	} else {
+		_, err = s.db.Exec(`
+			UPDATE rfds
+			SET title = ?, state = ?, discussion = ?, tags = ?, public = ?, content = ?, content_md = ?, pr_link = ?, modified_at = ?
+			WHERE id = ?
+		`, rfd.Title, string(rfd.State), rfd.Discussion, string(tagsJSON), publicInt, rfd.Content, rfd.ContentMD, rfd.PRLink, rfd.ModifiedAt, rfd.ID)
+	}
 
 	return err
 }
@@ -390,6 +402,7 @@ func scanRFD(s scanner) (*models.RFD, error) {
 		&publicInt,
 		&rfd.Content,
 		&rfd.ContentMD,
+		&rfd.PRLink,
 		&rfd.CreatedAt,
 		&rfd.ModifiedAt,
 	)

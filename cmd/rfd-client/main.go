@@ -23,6 +23,7 @@ var validRFDNumber *regexp.Regexp
 var server string
 var token string
 var skipDiscussion bool
+var prLink string
 
 func main() {
 	rfdNum := flag.String("rfd", "", "If passed will operate on single rfd")
@@ -32,9 +33,11 @@ func main() {
 	repoPath := flag.String("repo", ".", "path to git repo (for branch import)")
 	rfdFolder := flag.String("rfd-folder", "adr", "folder containing ADRs within repo")
 	skipDisc := flag.Bool("skip-discussion", false, "skip creating discussions (for bulk imports)")
+	prLinkFlag := flag.String("pr-link", "", "URL to the open PR for this RFD (from CI context)")
 	flag.Parse()
 
 	skipDiscussion = *skipDisc
+	prLink = *prLinkFlag
 
 	r, _ := regexp.Compile(`^\d{4}`)
 
@@ -87,6 +90,11 @@ func main() {
 	rfd, err := getRFD(rfdDir, validatedRfdNum, false)
 	if err != nil {
 		fatal("Failed to read RFD %s: %v", validatedRfdNum, err)
+	}
+
+	// Set PR link if provided (from CI context)
+	if prLink != "" {
+		rfd.PRLink = prLink
 	}
 
 	if err := sendRFD(rfd); err != nil {

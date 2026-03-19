@@ -378,6 +378,27 @@ a.author-item:hover .author-icon {
     color: #63b3ed;
 }
 
+.pr-link a {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #a0aec0;
+    font-weight: 500;
+}
+.pr-link svg {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.375rem;
+    color: #718096;
+}
+.pr-link a:hover {
+    color: #68d391;
+    text-decoration: none;
+}
+.pr-link a:hover svg {
+    color: #68d391;
+}
+
 .rfd-content {
     background-color: #393e46;
     border-radius: 0.5rem;
